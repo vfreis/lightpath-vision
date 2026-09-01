@@ -34,6 +34,8 @@ export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState('')
   const [cameraError, setCameraError] = useState('')
+  const [cameraReady, setCameraReady] = useState(false)
+  const [captureFlash, setCaptureFlash] = useState(false)
   const [stage, setStage] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -46,6 +48,7 @@ export default function App() {
   const cleanupCamera = () => {
     streamRef.current?.getTracks().forEach(track => track.stop())
     streamRef.current = null
+    setCameraReady(false)
   }
 
   useEffect(() => () => {
@@ -62,6 +65,7 @@ export default function App() {
 
   async function openCamera() {
     setCameraError('')
+    setCameraReady(false)
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError('Câmera não disponível neste navegador. Use a galeria.')
       setView('camera')
@@ -111,7 +115,9 @@ export default function App() {
 
   async function capture() {
     const video = videoRef.current
-    if (!video || !video.videoWidth) return
+    if (!video || !video.videoWidth || !cameraReady) return
+    setCaptureFlash(true)
+    window.setTimeout(() => setCaptureFlash(false), 150)
     try { setNormalized(await canvasCapture(video)) }
     catch { setErrorAndView('A captura falhou. Tente novamente ou use a galeria.') }
   }
@@ -143,6 +149,7 @@ export default function App() {
       if (controller.signal.aborted) return
       const code = e instanceof Error ? e.message : 'UNKNOWN_ERROR'
       const friendly = code === 'API_NOT_CONFIGURED' ? 'A API remota não está configurada.'
+        : code === 'API_INSECURE_URL' ? 'A API precisa estar disponível por HTTPS para funcionar neste deploy.'
         : code === 'openai_rate_limited' || code === 'rate_limited' ? 'A IA está temporariamente ocupada. Tente novamente.'
         : code.startsWith('openai_') ? 'A análise de IA falhou. Nenhum resultado foi inventado.'
         : code === 'origin_not_allowed' ? 'Este endereço do app ainda não está autorizado pelo backend.'
@@ -158,6 +165,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: reduced ? 0 : .34, ease: [0.22, 1, 0.36, 1] }}>
       <main className="app-shell">
+        <div className="oven-glow" aria-hidden="true" />
         <header className="topbar">
           <div><strong>LA BRACIERA</strong><span>VISION</span></div>
           <div className="live-pill"><span className={canLive ? 'dot on' : 'dot'} />{canLive ? 'LIVE pronto' : 'API pendente'}</div>
@@ -166,33 +174,34 @@ export default function App() {
         <AnimatePresence mode="wait">
           {view === 'home' && (
             <motion.section key="home" className="screen home" initial={{ opacity: 0, y: reduced ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div className="eyebrow"><Sparkles size={15}/> Visão computacional aplicada à excelência</div>
-              <h1>Do forno ao padrão.<br/><em>Em uma foto.</em></h1>
-              <p className="lead">Reconheça pizzas do catálogo controlado e visualize sinais preliminares de qualidade — sem transformar incerteza em resposta falsa.</p>
+              <motion.div className="eyebrow" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Sparkles size={15}/> Visão computacional aplicada à excelência</motion.div>
+              <motion.h1 initial={{ opacity: 0, y: reduced ? 0 : 14 }} animate={{ opacity: 1, y: 0 }}>Do forno ao padrão.<br/><em>Em uma foto.</em></motion.h1>
+              <motion.p className="lead" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduced ? 0 : .08 }}>Reconheça pizzas do catálogo controlado e visualize sinais preliminares de qualidade — sem transformar incerteza em resposta falsa.</motion.p>
               <div className="action-stack">
-                <button className="primary" onClick={openCamera}><Camera/> Tirar foto</button>
-                <button className="secondary" onClick={() => fileRef.current?.click()}><Upload/> Anexar da galeria</button>
+                <motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={openCamera}><Camera/> Tirar foto</motion.button>
+                <motion.button className="secondary" whileTap={reduced ? undefined : { scale: .985 }} onClick={() => fileRef.current?.click()}><Upload/> Anexar da galeria</motion.button>
               </div>
               <div className="mode-grid">
-                <div className="mode-card"><span>LIVE</span><b>Câmera ou upload real</b><small>{canLive ? 'Conectado à API remota.' : 'Disponível assim que VITE_API_BASE_URL for configurada.'}</small></div>
-                <div className="mode-card"><span>DEMO SEGURA</span><b>Fotos reais pré-validadas</b><small>{canSafeDemo ? `${DEMO_SAMPLES.length} amostra(s) validada(s).` : 'Bloqueada até existirem imagens + resultados reais com proveniência.'}</small></div>
+                <div className="mode-card"><span>LIVE</span><b>Câmera ou upload real</b><small>{canLive ? 'Conectado à API HTTPS.' : 'Disponível assim que VITE_API_BASE_URL for configurada.'}</small></div>
+                <div className="mode-card"><span>CATÁLOGO</span><b>36 pizzas conhecidas</b><small>Baixa evidência ou ambiguidade continuam retornando inconclusive.</small></div>
               </div>
-              {!canSafeDemo && <p className="truth-note"><ShieldCheck size={16}/> A demo segura não usa fixtures inventadas. Ela permanece bloqueada até o conjunto pré-validado existir.</p>}
+              {!canSafeDemo && <p className="truth-note"><ShieldCheck size={16}/> A demo segura continua bloqueada até existirem fotos reais pré-validadas pela mesma API.</p>}
             </motion.section>
           )}
 
           {view === 'camera' && (
             <motion.section key="camera" className="screen camera-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="camera-frame">
-                <video ref={videoRef} playsInline muted className="camera-video" />
-                <div className="pizza-guide" aria-hidden="true" />
+                <video ref={videoRef} playsInline muted className="camera-video" onCanPlay={() => setCameraReady(true)} />
+                <div className={cameraReady ? 'pizza-guide ready' : 'pizza-guide'} aria-hidden="true" />
+                <AnimatePresence>{captureFlash && <motion.div className="capture-flash" initial={{ opacity: .8 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} />}</AnimatePresence>
                 {cameraError && <div className="camera-message"><XCircle/><p>{cameraError}</p></div>}
               </div>
               <p className="camera-tip">Enquadre a pizza inteira e deixe uma pequena margem ao redor.</p>
               <div className="camera-controls">
-                <button className="icon-action" onClick={() => fileRef.current?.click()} aria-label="Abrir galeria"><ImageIcon/></button>
-                <button className="shutter" onClick={capture} aria-label="Capturar foto" disabled={!!cameraError}><span/></button>
-                <button className="icon-action" onClick={reset} aria-label="Fechar câmera"><XCircle/></button>
+                <motion.button className="icon-action" whileTap={reduced ? undefined : { scale: .92 }} onClick={() => fileRef.current?.click()} aria-label="Abrir galeria"><ImageIcon/></motion.button>
+                <motion.button className="shutter" whileTap={reduced ? undefined : { scale: .9 }} onClick={capture} aria-label="Capturar foto" disabled={!!cameraError || !cameraReady}><span/></motion.button>
+                <motion.button className="icon-action" whileTap={reduced ? undefined : { scale: .92 }} onClick={reset} aria-label="Fechar câmera"><XCircle/></motion.button>
               </div>
             </motion.section>
           )}
@@ -202,15 +211,15 @@ export default function App() {
               <div className="section-label">PREVIEW</div>
               <motion.img layoutId="pizza-photo" src={preview} className="photo-card" alt="Foto selecionada da pizza" />
               <h2>Boa foto?</h2><p>Confirme para iniciar a análise. A imagem já foi orientada e reduzida antes do envio.</p>
-              <div className="action-stack"><button className="primary" onClick={analyze}><Sparkles/> Analisar pizza</button><button className="secondary" onClick={reset}><RotateCcw/> Refazer</button></div>
+              <div className="action-stack"><motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={analyze}><Sparkles/> Analisar pizza</motion.button><motion.button className="secondary" whileTap={reduced ? undefined : { scale: .985 }} onClick={reset}><RotateCcw/> Refazer</motion.button></div>
             </motion.section>
           )}
 
           {view === 'analyzing' && preview && (
-            <motion.section key="analyzing" className="screen analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.section key="analyzing" className="screen analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} aria-live="polite">
               <div className="section-label">ANÁLISE EM CURSO</div>
               <div className="scan-wrap"><motion.img layoutId="pizza-photo" src={preview} className="photo-card" alt="Pizza em análise"/><div className="scan-line" /></div>
-              <div className="stage-list">{stages.map((s, i) => <div key={s} className={i <= stage ? 'stage active' : 'stage'}>{i < stage ? <CheckCircle2/> : <span className="stage-dot"/>}<span>{s}</span></div>)}</div>
+              <div className="stage-list">{stages.map((s, i) => <motion.div key={s} className={i <= stage ? 'stage active' : 'stage'} initial={{ opacity: .55, x: reduced ? 0 : -4 }} animate={{ opacity: i <= stage ? 1 : .55, x: 0 }}>{i < stage ? <CheckCircle2/> : <span className="stage-dot"/>}<span>{s}</span></motion.div>)}</div>
               <small className="latency-note">Os estágios são feedback de interface; a conclusão só aparece após resposta real da API.</small>
             </motion.section>
           )}
@@ -222,17 +231,18 @@ export default function App() {
               <motion.h2 initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }}>{result.status === 'success' ? result.pizzaName : 'Não tenho confiança suficiente'}</motion.h2>
               <p className="confidence">{confidenceText(result)}</p>
               {result.status === 'inconclusive' && <p>Esta foto não oferece evidência suficiente para escolher uma pizza do catálogo com segurança.</p>}
-              {result.ingredients.length > 0 && <div className="panel"><h3>Ingredientes do catálogo</h3><div className="chips">{result.ingredients.map(x => <span key={x}>{x}</span>)}</div></div>}
-              {qualityEntries.length > 0 && <div className="panel"><h3>Prévia de padrão visual</h3><p className="panel-caption">Sinais experimentais; não são critérios oficiais de QA da La Braciera.</p>{qualityEntries.map(([key,q]) => <div className="quality" key={key}><i className={q.state}/><div><b>{qualityLabels[key]}</b><small>{q.observation}</small></div></div>)}</div>}
+              {result.ingredients.length > 0 && <div className="panel"><h3>Ingredientes do catálogo</h3><div className="chips">{result.ingredients.map((x, index) => <motion.span key={x} initial={{ opacity: 0, y: reduced ? 0 : 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduced ? 0 : .035 * index }}>{x}</motion.span>)}</div></div>}
+              {result.referenceImage && <motion.figure className="reference-card" layoutId="official-reference" initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }}><img src={result.referenceImage} alt={`Referência oficial de ${result.pizzaName || 'pizza La Braciera'}`} loading="lazy"/><figcaption><span>Referência oficial</span><strong>{result.pizzaName || 'La Braciera'}</strong><small>Imagem verificada do catálogo usada como contexto visual.</small></figcaption></motion.figure>}
+              {qualityEntries.length > 0 && <div className="panel"><h3>Prévia de padrão visual</h3><p className="panel-caption">Sinais experimentais; não são critérios oficiais de QA da La Braciera.</p>{qualityEntries.map(([key,q], index) => <motion.div className="quality" key={key} initial={{ opacity: 0, x: reduced ? 0 : -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: reduced ? 0 : .07 * index }}><i className={q.state}/><div><b>{qualityLabels[key]}</b><small>{q.observation}</small></div></motion.div>)}</div>}
               {result.alternatives.length > 0 && <details className="panel"><summary>Alternativas <ChevronDown size={18}/></summary>{result.alternatives.map(a => <div className="alternative" key={a.pizzaId}><span>{a.pizzaName}</span><small>{a.confidenceScore == null ? 'não calibrado' : `${Math.round(a.confidenceScore * 100)}%`}</small></div>)}</details>}
               {result.warnings.length > 0 && <div className="warning-box">{result.warnings.join(' ')}</div>}
-              <button className="primary" onClick={reset}><RotateCcw/> Nova análise</button>
+              <motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={reset}><RotateCcw/> Nova análise</motion.button>
             </motion.section>
           )}
 
           {view === 'error' && (
             <motion.section key="error" className="screen error-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <XCircle size={42}/><div className="section-label">ERRO REAL</div><h2>A análise não foi concluída.</h2><p>{error}</p><p className="truth-note">Nenhum fallback de pizza foi exibido.</p><button className="primary" onClick={reset}><RotateCcw/> Tentar novamente</button>
+              <XCircle size={42}/><div className="section-label">ERRO REAL</div><h2>A análise não foi concluída.</h2><p>{error}</p><p className="truth-note">Nenhum fallback de pizza foi exibido.</p><motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={reset}><RotateCcw/> Tentar novamente</motion.button>
             </motion.section>
           )}
         </AnimatePresence>
