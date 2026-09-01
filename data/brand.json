@@ -1,0 +1,55 @@
+{
+  "brand": "La Braciera",
+  "descriptor": "Pizza Napoletana",
+  "verifiedAt": "2026-09-01",
+  "officialSources": [
+    "https://labraciera.com.br/",
+    "https://labraciera.com.br/sobre",
+    "https://labraciera.com.br/cardapio",
+    "https://labraciera.com.br/cardapio/completo",
+    "https://experiencia.labraciera.com.br/",
+    "https://experiencia.labraciera.com.br/pages/quem-somos"
+  ],
+  "assets": {
+    "logoLight": {
+      "url": "https://experiencia.labraciera.com.br/cdn/shop/files/logo-light-D1h8MQw-_1.webp?v=1786366284&width=1100",
+      "status": "verified_official_cdn",
+      "usage": "Preservar proporção e área de respiro; não redesenhar o wordmark."
+    },
+    "pizzaReferenceManifest": {
+      "path": "data/reference-images.json",
+      "status": "verified_partial_official_cdn",
+      "verifiedIndividualSkuCount": 6
+    }
+  },
+  "tokens": {
+    "colors": {
+      "status": "unverified_exact_values",
+      "values": {},
+      "rule": "Não declarar HEX oficial sem CSS/brandbook verificável."
+    },
+    "typography": {
+      "status": "unverified_exact_families_and_weights",
+      "families": [],
+      "rule": "Não declarar família/peso oficial sem extração verificável do site ou brandbook."
+    },
+    "assetCss": {
+      "logoLight": "url(\"https://experiencia.labraciera.com.br/cdn/shop/files/logo-light-D1h8MQw-_1.webp?v=1786366284&width=1100\")"
+    }
+  },
+  "verifiedBrandSignals": [
+    "pizza napolitana premium",
+    "tradição e técnica italiana",
+    "fogo e forno como centro da experiência",
+    "ingredientes selecionados",
+    "autenticidade com inovação",
+    "fotografia de produto como protagonista",
+    "tecnologia LightPath secundária à marca La Braciera"
+  ],
+  "doNotInfer": [
+    "HEX oficial",
+    "família tipográfica oficial",
+    "pesos tipográficos oficiais",
+    "versões de logo além do asset verificado"
+  ]
+}
