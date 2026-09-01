@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { finalizeModelDecision } from "../src/analyze.js";
+import {
+  catalog,
+  enabledCatalog,
+  EXPECTED_CATALOG_SIZE,
+  EXPECTED_RECOGNITION_CLASSES
+} from "../src/catalog.js";
 import type { ModelDecision } from "../src/schemas.js";
 
 const qualitySignals: ModelDecision["qualitySignals"] = {
@@ -23,6 +29,27 @@ function decision(overrides: Partial<ModelDecision> = {}): ModelDecision {
     ...overrides
   };
 }
+
+test("canonical catalog contains exactly 36 pizzas and all are recognition-enabled", () => {
+  assert.equal(EXPECTED_CATALOG_SIZE, 36);
+  assert.equal(EXPECTED_RECOGNITION_CLASSES, 36);
+  assert.equal(catalog.length, 36);
+  assert.equal(enabledCatalog.length, 36);
+  assert.ok(catalog.every((item) => item.recognitionEnabled));
+  assert.equal(new Set(catalog.map((item) => item.slug)).size, 36);
+});
+
+test("verified official La Braciera reference overlay remains attached", () => {
+  const officialReferences = enabledCatalog.flatMap((item) => item.referenceImages)
+    .filter((value) => {
+      try {
+        return new URL(value).hostname.endsWith("labraciera.com.br");
+      } catch {
+        return false;
+      }
+    });
+  assert.ok(officialReferences.length >= 6);
+});
 
 test("accepts an enabled catalog ID with sufficient separation", () => {
   const result = finalizeModelDecision("req-1", decision());
