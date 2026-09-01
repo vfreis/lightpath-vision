@@ -5,7 +5,14 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import multer from "multer";
 import { finalizeModelDecision } from "./analyze.js";
-import { catalogSourcePath, catalogVersion, enabledCatalog, publicCatalog } from "./catalog.js";
+import {
+  catalog,
+  catalogSourcePath,
+  catalogVersion,
+  enabledCatalog,
+  EXPECTED_RECOGNITION_CLASSES,
+  publicCatalog
+} from "./catalog.js";
 import { config } from "./config.js";
 import { normalizeImage } from "./image.js";
 import { classifyWithOpenAI } from "./openai.js";
@@ -64,9 +71,13 @@ const upload = multer({
 app.get("/healthz", (_req, res) => {
   res.json({
     status: "ok",
+    catalogItems: catalog.length,
     recognitionClasses: enabledCatalog.length,
+    expectedRecognitionClasses: EXPECTED_RECOGNITION_CLASSES,
     openaiConfigured: Boolean(config.OPENAI_API_KEY),
-    catalogVersion
+    catalogVersion,
+    port: config.PORT,
+    node: process.versions.node
   });
 });
 
@@ -111,7 +122,7 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 };
 app.use(errorHandler);
 
-app.listen(config.PORT, () => {
-  console.log(`Braciera Vision API listening on :${config.PORT}`);
+app.listen(config.PORT, "0.0.0.0", () => {
+  console.log(`Braciera Vision API listening on 0.0.0.0:${config.PORT}`);
   console.log(`Catalog: ${catalogSourcePath}; version: ${catalogVersion}; enabled classes: ${enabledCatalog.length}`);
 });
