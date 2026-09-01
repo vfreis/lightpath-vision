@@ -1,9 +1,16 @@
 {
   "name": "lightpath-vision",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "workspaces": ["frontend", "api"],
   "scripts": {
     "build": "npm --workspace frontend run build && npm --workspace @lightpath/braciera-vision-api run build",
+    "build:api": "npm --workspace @lightpath/braciera-vision-api run build",
+    "start": "npm --workspace @lightpath/braciera-vision-api start",
+    "hostinger:build": "npm run build:api",
+    "hostinger:smoke": "npm --workspace @lightpath/braciera-vision-api run smoke:hostinger",
     "test": "npm --workspace @lightpath/braciera-vision-api test",
     "typecheck": "npm --workspace @lightpath/braciera-vision-api run typecheck",
     "check": "npm run typecheck && npm run test && npm run build"
