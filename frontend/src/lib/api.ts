@@ -1,0 +1,20 @@
+import type { AnalysisResult } from '../types'
+
+const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
+export function apiConfigured() {
+  return Boolean(BASE)
+}
+
+export async function analyzePizza(file: File, signal?: AbortSignal): Promise<AnalysisResult> {
+  if (!BASE) throw new Error('API_NOT_CONFIGURED')
+  const form = new FormData()
+  form.append('image', file, file.name)
+  const response = await fetch(`${BASE}/v1/analyze`, { method: 'POST', body: form, signal })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message = data?.error?.code || `HTTP_${response.status}`
+    throw new Error(message)
+  }
+  return data as AnalysisResult
+}
