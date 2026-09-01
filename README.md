@@ -2,15 +2,24 @@
 
 Protótipo comercial mobile-first de visão computacional para a La Braciera.
 
-## Integração final
+## Integração
 
-- `frontend/`: experiência React + Vite + TypeScript + Motion consolidada pelo A4 a partir dos requisitos/handoff do A2.
-- `api/`: backend Node 22 + TypeScript do A3, integrado sem alterar seus guardrails.
-- `docs/A2_FRONTEND_HANDOFF.md`: evidência/handoff original do A2.
-- `docs/API_CONTRACT.md`: contrato canônico do A3.
-- `docs/QA_GO_NO_GO.md`: gate final do A4.
+- `frontend/`: React + Vite + TypeScript + Motion; câmera traseira, galeria, preview, análise e resultados.
+- `api/`: backend Node 22 + TypeScript; OpenAI server-side, catálogo fechado, Structured Outputs e guardrails de `inconclusive`.
+- `data/menu.json`: catálogo canônico reconciliado para o protótipo.
+- `docs/A2_FRONTEND_HANDOFF.md`: handoff do frontend.
+- `docs/API_CONTRACT.md`: contrato canônico da API.
+- `docs/QA_GO_NO_GO.md`: gate de QA e apresentação.
 
 A jornada é câmera traseira ou galeria → preview/normalização → análise real → `success` ou `inconclusive`; falhas de rede/OpenAI permanecem `error`. O frontend nunca recebe `OPENAI_API_KEY`.
+
+## Catálogo completo
+
+A decisão de produto vigente é reconhecer **todas as pizzas atualmente reconciliadas no cardápio/listagens correntes**, e não apenas um subconjunto de demo. O `data/menu.json` contém **36 sabores**, todos com `recognitionEnabled: true`.
+
+Cada item preserva fonte, data de reconciliação, `confidenceTier` e estado de disponibilidade. Itens cuja ficha/validade ainda depende de reconciliação oficial permanecem sinalizados; isso não autoriza o modelo a inventar informação.
+
+Cobertura ampla não remove o guardrail: sabores visualmente semelhantes, imagem ruim, pizza fora do catálogo ou evidência insuficiente devem retornar `inconclusive`.
 
 ## Local
 
@@ -27,4 +36,4 @@ VITE_API_BASE_URL=http://localhost:8787 npm --workspace frontend run dev
 
 ## Brand gate
 
-O handoff final do A1 ainda não estava disponível no fechamento A4. Por isso a UI conserva tokens neutros, explicitamente não oficiais, e aguarda assets/tokens verificados antes de ser apresentada como fidelidade visual final da La Braciera.
+O catálogo foi consolidado pelo Tech Lead após a entrega incompleta do A1. Assets oficiais, tipografia/tokens finais e imagens de referência ainda precisam ser incorporados antes de afirmar fidelidade visual completa à marca La Braciera. Até esse gate fechar, a UI usa tokens de apresentação explicitamente neutros.
