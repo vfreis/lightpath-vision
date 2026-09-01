@@ -1,29 +1,51 @@
 # Deploy
 
-## Frontend — GitHub Pages
+## Backend — Hostinger Node.js Web App
 
-O workflow de Pages compila `frontend/` com Vite base `/lightpath-vision/`. Configure a Actions variable `VITE_API_BASE_URL` com a origem HTTPS pública do backend, sem barra final, e habilite GitHub Pages com **GitHub Actions** como source.
-
-URL prevista: `https://vfreis.github.io/lightpath-vision/`.
-
-## Backend A3 — host Node.js 22 com HTTPS
-
-O backend canônico está em `api/`.
+Deploy from the **repository root**. The root package is intentionally production-ready for the API:
 
 ```bash
-cd api
 npm install
 npm run build
 npm start
 ```
 
-Secrets/env mínimos:
-- `OPENAI_API_KEY` somente server-side;
-- `ALLOWED_ORIGINS=https://vfreis.github.io` em produção;
-- `OPENAI_MODEL`, thresholds e limites conforme `api/.env.example`.
+Contract:
 
-O endpoint consumido pelo frontend é `POST /api/v1/analyze`. Nunca coloque a chave OpenAI em variável `VITE_*`.
+- Node `22.x`
+- port `3000`
+- `GET /healthz`
+- `GET /api/v1/catalog`
+- `POST /api/v1/analyze`
+
+Secrets/env are configured in Hostinger. `OPENAI_API_KEY` is server-side only. In production use `ALLOWED_ORIGINS=https://vfreis.github.io` and the remaining limits/thresholds from `api/.env.example`.
+
+Full instructions and the strict smoke matrix are in `docs/HOSTINGER_GO_LIVE.md`.
+
+## Frontend — GitHub Pages
+
+The Pages workflow compiles `frontend/` with Vite base `/lightpath-vision/`. Configure the repository Actions variable:
+
+```text
+VITE_API_BASE_URL=https://<temporary-hostinger-origin>
+```
+
+Enable GitHub Pages with **GitHub Actions** as source. Expected URL:
+
+```text
+https://vfreis.github.io/lightpath-vision/
+```
+
+The frontend never receives `OPENAI_API_KEY`. It performs `/healthz` itself and only exposes LIVE as ready when the API reports 36 recognition classes and OpenAI configured.
 
 ## Demo Segura
 
-`frontend/src/demo.ts` começa propositalmente vazio. Só adicione uma amostra depois de: (1) a imagem real estar aprovada/licenciada para a demo; (2) a imagem exata ter passado pela API live; (3) SHA-256, data de validação e proveniência terem sido registrados; (4) o resultado salvo ser a resposta real obtida. Não escreva manualmente uma classificação de sucesso.
+`frontend/src/demo-samples.json` starts as `[]`. Do not hand-author successful fixtures.
+
+Use the real Hostinger API:
+
+```bash
+API_BASE_URL=https://<temporary-hostinger-origin> npm run demo:validate
+```
+
+After reviewing the real results, use `WRITE_DEMO=1` to generate the manifest. Every entry records SHA-256, API origin, validation timestamp, provenance and the exact real response. At presentation time the browser verifies the hash and calls the LIVE API again; a stored result is never shown as fallback.
