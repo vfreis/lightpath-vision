@@ -11,10 +11,12 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm --workspace backend test
+      - run: npm --workspace @lightpath/braciera-vision-api run typecheck
+      - run: npm --workspace @lightpath/braciera-vision-api test
+      - run: npm --workspace @lightpath/braciera-vision-api run build
       - run: npm --workspace frontend run build
       - name: Secret scan guard
         run: |
-          if grep -R --exclude-dir=node_modules --exclude='*.md' -nE 'sk-[A-Za-z0-9_-]{20,}' frontend backend; then
+          if grep -R --exclude-dir=node_modules --exclude='*.md' -nE 'sk-[A-Za-z0-9_-]{20,}' frontend api; then
             echo 'Possible OpenAI secret found in repository'; exit 1
           fi

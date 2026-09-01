@@ -1,0 +1,80 @@
+[
+  {
+    "slug": "zozzona",
+    "displayName": "Zozzona",
+    "aliases": [],
+    "category": "pizza_salgada",
+    "ingredients": ["Pomodoro Italiano", "Fiordillatte", "Calabresa Artesanal Cinque", "Guanciale", "Creme de Pecorino", "Basílico"],
+    "source": "https://labraciera.com.br/cardapio",
+    "sourceDate": null,
+    "confidenceTier": "A",
+    "recognitionEnabled": true,
+    "referenceImages": [],
+    "notes": "Bootstrap derivado do Vault. A1 deve substituir/enriquecer com referências oficiais antes do freeze da demo."
+  },
+  {
+    "slug": "bastarda",
+    "displayName": "Bastarda",
+    "aliases": [],
+    "category": "pizza_salgada",
+    "ingredients": ["Pancetta", "Mozzarella", "Alho Negro"],
+    "source": "https://labraciera.com.br/cardapio",
+    "sourceDate": null,
+    "confidenceTier": "A",
+    "recognitionEnabled": true,
+    "referenceImages": [],
+    "notes": "Descrição oficial resumida; detalhes variam entre superfícies oficiais."
+  },
+  {
+    "slug": "caprese",
+    "displayName": "Caprese",
+    "aliases": [],
+    "category": "pizza_salgada",
+    "ingredients": ["Muçarela", "Tomate fresco", "Pesto de azeitona", "Manjericão"],
+    "source": "https://labraciera.com.br/cardapio",
+    "sourceDate": null,
+    "confidenceTier": "A",
+    "recognitionEnabled": true,
+    "referenceImages": [],
+    "notes": "Bootstrap derivado do Vault."
+  },
+  {
+    "slug": "burrata-al-pesto-e-pepperoni",
+    "displayName": "Burrata al Pesto e Pepperoni",
+    "aliases": [],
+    "category": "pizza_salgada",
+    "ingredients": ["Fior di latte", "Pesto de tomate seco", "Castanha-de-caju", "Salsa trufada", "Pepperoni", "Pimentões assados", "Azeitonas pretas", "Burrata"],
+    "source": "https://labraciera.com.br/cardapio",
+    "sourceDate": null,
+    "confidenceTier": "A",
+    "recognitionEnabled": true,
+    "referenceImages": [],
+    "notes": "Bootstrap derivado do Vault."
+  },
+  {
+    "slug": "pancetta-e-patate",
+    "displayName": "Pancetta e Patate",
+    "aliases": [],
+    "category": "pizza_salgada",
+    "ingredients": ["Pancetta", "Fior di latte", "Batata assada", "Gorgonzola"],
+    "source": "https://labraciera.com.br/cardapio",
+    "sourceDate": null,
+    "confidenceTier": "A",
+    "recognitionEnabled": true,
+    "referenceImages": [],
+    "notes": "Bootstrap derivado do Vault."
+  },
+  {
+    "slug": "nutella-lindt-brownie",
+    "displayName": "Nutella, Lindt & Brownie",
+    "aliases": ["Nutella Lindt Brownie"],
+    "category": "pizza_doce",
+    "ingredients": ["Nutella", "Chocolate Lindt ao leite", "Brownie"],
+    "source": "https://labraciera.com.br/cardapio",
+    "sourceDate": null,
+    "confidenceTier": "A",
+    "recognitionEnabled": true,
+    "referenceImages": [],
+    "notes": "Bootstrap derivado do Vault."
+  }
+]

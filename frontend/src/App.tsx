@@ -4,15 +4,25 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { analyzePizza, apiConfigured } from './lib/api'
 import { canvasCapture, normalizeImage } from './lib/image'
 import { DEMO_SAMPLES } from './demo'
-import type { AnalysisResult } from './types'
+import type { AnalysisResult, QualitySignals } from './types'
 
 type View = 'home' | 'camera' | 'preview' | 'analyzing' | 'result' | 'error'
 
 const stages = ['Lendo formato', 'Comparando com o cardápio', 'Avaliando padrão visual']
+const qualityLabels: Record<keyof QualitySignals, string> = {
+  shape: 'Formato / circularidade',
+  bake: 'Assamento visual',
+  crust: 'Borda / cornicione',
+  toppingDistribution: 'Distribuição de ingredientes',
+  expectedIngredients: 'Ingredientes esperados visíveis'
+}
 
 function confidenceText(result: AnalysisResult) {
   if (result.status === 'inconclusive') return 'Inconclusivo'
-  if (result.confidenceScore == null) return result.confidenceLabel
+  if (!result.confidenceCalibrated || result.confidenceScore == null) {
+    const labels = { high: 'Confiança visual alta', medium: 'Confiança visual média', low: 'Confiança visual baixa', unavailable: 'Confiança indisponível' }
+    return labels[result.confidenceLabel]
+  }
   return `${Math.round(result.confidenceScore * 100)}% de confiança`
 }
 
@@ -133,14 +143,17 @@ export default function App() {
       if (controller.signal.aborted) return
       const code = e instanceof Error ? e.message : 'UNKNOWN_ERROR'
       const friendly = code === 'API_NOT_CONFIGURED' ? 'A API remota não está configurada.'
-        : code.includes('429') || code === 'OPENAI_RATE_LIMIT' ? 'A IA está temporariamente ocupada. Tente novamente.'
-        : code === 'OPENAI_ERROR' ? 'A análise de IA falhou. Nenhum resultado foi inventado.'
+        : code === 'openai_rate_limited' || code === 'rate_limited' ? 'A IA está temporariamente ocupada. Tente novamente.'
+        : code.startsWith('openai_') ? 'A análise de IA falhou. Nenhum resultado foi inventado.'
+        : code === 'origin_not_allowed' ? 'Este endereço do app ainda não está autorizado pelo backend.'
+        : code === 'invalid_image' || code === 'unsupported_image_type' ? 'A imagem não pôde ser processada. Tente outra foto.'
         : 'Falha de rede ou serviço. Verifique a conexão e tente novamente.'
       setErrorAndView(friendly)
     }
   }
 
-  const statusTone = useMemo(() => result?.status === 'success' ? 'ok' : result?.status === 'inconclusive' ? 'warn' : 'bad', [result])
+  const statusTone = useMemo(() => result?.status === 'success' ? 'ok' : 'warn', [result])
+  const qualityEntries = result ? (Object.entries(result.qualitySignals) as Array<[keyof QualitySignals, QualitySignals[keyof QualitySignals]]>) : []
 
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: reduced ? 0 : .34, ease: [0.22, 1, 0.36, 1] }}>
@@ -210,8 +223,8 @@ export default function App() {
               <p className="confidence">{confidenceText(result)}</p>
               {result.status === 'inconclusive' && <p>Esta foto não oferece evidência suficiente para escolher uma pizza do catálogo com segurança.</p>}
               {result.ingredients.length > 0 && <div className="panel"><h3>Ingredientes do catálogo</h3><div className="chips">{result.ingredients.map(x => <span key={x}>{x}</span>)}</div></div>}
-              {result.qualitySignals.length > 0 && <div className="panel"><h3>Prévia de padrão visual</h3><p className="panel-caption">Sinais experimentais; não são critérios oficiais de QA da La Braciera.</p>{result.qualitySignals.map(q => <div className="quality" key={q.label}><i className={q.state}/><div><b>{q.label}</b><small>{q.detail}</small></div></div>)}</div>}
-              {result.alternatives.length > 0 && <details className="panel"><summary>Alternativas <ChevronDown size={18}/></summary>{result.alternatives.map(a => <div className="alternative" key={a.pizzaId}><span>{a.pizzaName}</span><small>{a.confidenceScore == null ? '—' : `${Math.round(a.confidenceScore * 100)}%`}</small></div>)}</details>}
+              {qualityEntries.length > 0 && <div className="panel"><h3>Prévia de padrão visual</h3><p className="panel-caption">Sinais experimentais; não são critérios oficiais de QA da La Braciera.</p>{qualityEntries.map(([key,q]) => <div className="quality" key={key}><i className={q.state}/><div><b>{qualityLabels[key]}</b><small>{q.observation}</small></div></div>)}</div>}
+              {result.alternatives.length > 0 && <details className="panel"><summary>Alternativas <ChevronDown size={18}/></summary>{result.alternatives.map(a => <div className="alternative" key={a.pizzaId}><span>{a.pizzaName}</span><small>{a.confidenceScore == null ? 'não calibrado' : `${Math.round(a.confidenceScore * 100)}%`}</small></div>)}</details>}
               {result.warnings.length > 0 && <div className="warning-box">{result.warnings.join(' ')}</div>}
               <button className="primary" onClick={reset}><RotateCcw/> Nova análise</button>
             </motion.section>
@@ -224,7 +237,7 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        <input ref={fileRef} type="file" accept="image/*" capture={undefined} hidden onChange={onFile}/>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile}/>
         <footer>Powered by <strong>LightPath</strong> · Protótipo comercial</footer>
       </main>
     </MotionConfig>
