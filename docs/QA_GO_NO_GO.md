@@ -4,37 +4,45 @@
 
 - Frontend: câmera traseira, galeria, preview/refazer, normalização local, Motion/shared image, scan, reduced-motion, safe areas e estados `success|inconclusive|error`.
 - Backend canônico: `api/`, com Responses API + Structured Outputs/Zod, `store:false`, threshold + margem, CORS, rate limit, requestId, normalização Sharp e erros reais sem fallback.
-- Adapter frontend integrado a `POST /api/v1/analyze`.
-- Catálogo canônico `data/menu.json`: 36 pizzas reconciliadas, todas com `recognitionEnabled: true`; cobertura ampla mantém `inconclusive` obrigatório para baixa evidência/ambiguidade.
-- O Tech Lead corrigiu o entrypoint compilado da API para `dist/src/server.js`.
+- Catálogo canônico `data/menu.json`: **36 pizzas**, todas com `recognitionEnabled=true`.
+- Overlay verificado atual: logo oficial La Braciera + seis imagens oficiais de referência (Zozzona, Bastarda, Caprese, Nutella/Lindt/Brownie, Provola & Croccante Di Parma e Cuore Di Napoli).
+- Hostinger root deploy preparado: Node `22.x`, `npm run build`, `npm start`, porta default `3000`.
+- Frontend só marca LIVE como pronto depois que `/healthz` informa exatamente 36 classes e OpenAI configurada.
+- Demo Segura possui manifest gerado por validação real; o browser verifica SHA-256 e reexecuta a API LIVE, nunca usando resultado salvo como fallback.
 
-## Casos cobertos por implementação/guardrails
+## Harness A4 de homologação
 
-1. Pizza do catálogo + separação suficiente → `success`.
-2. Sabores visualmente próximos → margem mínima pode converter para `inconclusive`.
-3. Foto ruim/baixa evidência → `inconclusive`.
-4. Pizza fora do catálogo/non-pizza → `inconclusive`; ID inválido é bloqueado server-side.
-5. Confiança baixa → `inconclusive`.
-6. Falha de rede → erro explícito no frontend.
-7. OpenAI quota/erro/timeout → erro real, sem resultado fictício.
+`scripts/smoke-api.mjs` valida a URL HTTPS real da Hostinger:
 
-## Catálogo / A1
+1. `/healthz`: `status=ok`, 36 classes, OpenAI configurada.
+2. CORS para `https://vfreis.github.io`.
+3. `/api/v1/catalog`: 36 classes e referências oficiais.
+4. Erro `image_required` sem fallback.
+5. Foto válida de baixa informação → `inconclusive`.
+6. Pizza havaiana fora do catálogo → `inconclusive`.
+7. Referências oficiais visualmente distintas → SKU esperado.
+8. Caprese/Cuore Di Napoli → SKU correto ou `inconclusive`, nunca classificação errada forçada.
 
-A entrega original do A1 não trouxe o dataset final. O Tech Lead reconciliou o catálogo e criou `data/menu.json` com 36 sabores. Ainda permanecem como gates de conteúdo: imagens oficiais de referência, confirmação final de alguns itens `confidenceTier=B`, disponibilidade da Nocciola e assets/tokens finais de marca.
+`scripts/validate-demo-samples.mjs` só gera `frontend/src/demo-samples.json` quando a imagem oficial exata retorna `success` para o SKU esperado na API LIVE. Registra hash, timestamp, origem da API, proveniência e resposta real.
 
-## Validação automatizada
+## Estado operacional observado em 2026-09-01
 
-Os workflows QA e Pages existem, mas as execuções observadas encerraram antes dos steps (`runner_id=0`/steps vazios). Isso não prova falha do código, porém também não comprova build/deploy. Após o merge desta correção, typecheck/test/build e Pages devem ser reexecutados.
+- O repositório GitHub ainda informa `has_pages=false`; portanto não há frontend Pages homologado/publicado.
+- As execuções recentes de GitHub Actions observadas continuam terminando antes de qualquer step (`runner_id=0`/steps vazios). Isso não prova falha do código, mas também não fornece build/deploy verde.
+- A URL HTTPS temporária da aplicação Node.js Hostinger não foi encontrada no Vault, no repositório nem no contexto recuperável desta execução; sem essa URL não é possível executar os testes live acima nem configurar `VITE_API_BASE_URL` com um valor real.
+- O manifest `frontend/src/demo-samples.json` permanece vazio até a API real ser testada.
+- Não houve acesso, nesta execução, a um Safari iOS e Chrome Android físicos para o smoke obrigatório.
 
 ## GO / NO-GO atual
 
-**NO-GO para apresentar como demo final LIVE + DEMO SEGURA**, até fechar:
+**NO-GO.** Não promover a demo como homologada até fechar simultaneamente:
 
-1. QA real: typecheck/test/build executados com sucesso e Pages publicado.
-2. Backend HTTPS com `OPENAI_API_KEY` server-side, CORS correto e `VITE_API_BASE_URL` configurado.
-3. Assets/tokens La Braciera e referências visuais oficiais incorporados.
-4. Demo Segura populada somente com fotos reais pré-validadas pela mesma API, com proveniência.
-5. Smoke físico em Safari iOS e Chrome Android: câmera, galeria, rotação, permissão negada, offline, retake e 360 px.
-6. Ensaio das 36 classes com fotos reais e calibração de threshold/margem; cobertura completa não implica precisão garantida para classes visualmente semelhantes.
+1. URL temporária Hostinger HTTPS acessível; `/healthz` deve provar 36 classes + OpenAI.
+2. `npm run smoke:api` deve passar usando OpenAI real, referências oficiais, negativos e CORS.
+3. `VITE_API_BASE_URL` deve apontar para essa origem e GitHub Pages deve estar efetivamente publicado.
+4. `npm run demo:validate` + `WRITE_DEMO=1` deve gerar apenas amostras reais que passaram na API.
+5. LIVE e DEMO SEGURA devem passar no frontend publicado, sem fallback sintético.
+6. Smoke físico em Safari iPhone e Chrome Android: câmera traseira, galeria, orientação, compressão, permissão negada, retake, offline/falha de rede, `success`, `inconclusive` e erro.
+7. Falha OpenAI real deve continuar como erro HTTP/UI real; não induzir falha deliberadamente em produção apenas para obter evidência.
 
-Até esses gates fecharem, a URL do Pages não deve ser anunciada como demo homologada.
+O procedimento operacional exato está em `docs/HOSTINGER_GO_LIVE.md`.
