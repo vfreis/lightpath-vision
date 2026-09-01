@@ -31,6 +31,15 @@ type AnalysisResult = {
   message?: string | null
 }
 
+type ApiQualitySignal = {
+  state?: string
+  observation?: string
+}
+
+type ApiAnalysisResult = Omit<AnalysisResult, 'qualitySignals'> & {
+  qualitySignals?: QualitySignal[] | Record<string, ApiQualitySignal>
+}
+
 type PreparedImage = {
   blob: Blob
   previewUrl: string
@@ -121,13 +130,12 @@ function App() {
       if (!API_BASE) throw new Error('A API de análise ainda não foi configurada neste ambiente.')
       const form = new FormData()
       form.append('image', prepared.blob, 'pizza.jpg')
-      form.append('metadata', JSON.stringify({ source: prepared.source, client: 'braciera-vision-web' }))
-      const response = await fetch(`${API_BASE}/analyze`, { method: 'POST', body: form })
-      if (!response.ok) throw new Error(response.status >= 500 ? 'O serviço de análise está temporariamente indisponível.' : 'Não foi possível analisar esta imagem.')
-      const payload = await response.json() as AnalysisResult
+      const response = await fetch(`${API_BASE}/api/v1/analyze`, { method: 'POST', body: form })
+      const payload = await response.json().catch(() => null) as ApiAnalysisResult | null
+      if (!response.ok) throw new Error(payload?.message || (response.status >= 500 ? 'O serviço de análise está temporariamente indisponível.' : 'Não foi possível analisar esta imagem.'))
       if (!payload || !['success', 'inconclusive', 'error'].includes(payload.status)) throw new Error('A resposta da análise veio em um formato inesperado.')
       if (payload.status === 'error') throw new Error(payload.message || 'A análise não pôde ser concluída.')
-      setResult(payload)
+      setResult(normalizeAnalysisResult(payload))
       setStep('result')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Falha inesperada durante a análise.')
@@ -309,6 +317,33 @@ function ResultScreen({ prepared, result, onReset, reduceMotion }: { prepared: P
       <button className="button primary" onClick={onReset}><Icon name="camera"/><span>Analisar outra pizza</span></button>
     </motion.section>
   )
+}
+
+const QUALITY_LABELS: Record<string, string> = {
+  shape: 'Formato / circularidade',
+  bake: 'Assamento visual',
+  crust: 'Borda / cornicione',
+  toppingDistribution: 'Distribuição de ingredientes',
+  expectedIngredients: 'Ingredientes esperados',
+}
+
+function normalizeAnalysisResult(payload: ApiAnalysisResult): AnalysisResult {
+  const rawSignals = payload.qualitySignals
+  const qualitySignals = Array.isArray(rawSignals)
+    ? rawSignals
+    : rawSignals
+      ? Object.entries(rawSignals).map(([key, signal]) => ({
+          label: QUALITY_LABELS[key] || humanizeKey(key),
+          state: signal.state === 'positive' ? 'good' : signal.state === 'negative' ? 'attention' : 'unknown',
+          detail: signal.observation,
+        }) satisfies QualitySignal)
+      : undefined
+
+  return { ...payload, qualitySignals }
+}
+
+function humanizeKey(value: string) {
+  return value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (char) => char.toUpperCase())
 }
 
 async function normalizeImage(input: Blob): Promise<Blob> {
