@@ -23,6 +23,9 @@ const CatalogSchema = z.array(MenuItemSchema).min(1);
 const ReferenceImageSchema = z.record(z.string(), z.array(z.string().url()));
 export type MenuItem = z.infer<typeof MenuItemSchema>;
 
+export const EXPECTED_CATALOG_SIZE = 36;
+export const EXPECTED_RECOGNITION_CLASSES = 36;
+
 function candidatePaths(): string[] {
   const explicit = config.MENU_CATALOG_PATH ? [resolve(config.MENU_CATALOG_PATH)] : [];
   return [
@@ -78,6 +81,14 @@ export const catalog = loaded.items;
 export const catalogSourcePath = loaded.sourcePath;
 export const catalogVersion = loaded.version;
 export const enabledCatalog = catalog.filter((item) => item.recognitionEnabled);
+
+if (catalog.length !== EXPECTED_CATALOG_SIZE) {
+  throw new Error(`catalog_size_mismatch:${catalog.length}:expected:${EXPECTED_CATALOG_SIZE}`);
+}
+if (enabledCatalog.length !== EXPECTED_RECOGNITION_CLASSES) {
+  throw new Error(`recognition_class_count_mismatch:${enabledCatalog.length}:expected:${EXPECTED_RECOGNITION_CLASSES}`);
+}
+
 export const enabledBySlug = new Map(enabledCatalog.map((item) => [item.slug, item]));
 
 export function publicCatalog() {
