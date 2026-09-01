@@ -2,16 +2,28 @@
 
 ## Frontend — GitHub Pages
 
-The Pages workflow builds `frontend/` with Vite base `/lightpath-vision/`. Configure repository **Actions variable** `VITE_API_BASE_URL` to the HTTPS backend origin (no trailing slash) and enable GitHub Pages with **GitHub Actions** as source.
+O workflow de Pages compila `frontend/` com Vite base `/lightpath-vision/`. Configure a Actions variable `VITE_API_BASE_URL` com a origem HTTPS pública do backend, sem barra final, e habilite GitHub Pages com **GitHub Actions** como source.
 
-Expected URL: `https://vfreis.github.io/lightpath-vision/`.
+URL prevista: `https://vfreis.github.io/lightpath-vision/`.
 
-## Backend — any HTTPS Node 22 host
+## Backend A3 — host Node.js 22 com HTTPS
 
-Run `npm install` then `npm --workspace backend start`. Required secret: `OPENAI_API_KEY`. Recommended env values are in `backend/.env.example`. `ALLOWED_ORIGINS` must include exactly the Pages origin; localhost is only for development.
+O backend canônico está em `api/`.
 
-The OpenAI key is never read by Vite and must never be stored in repository variables exposed to the client. Use the provider's server-side secret store.
+```bash
+cd api
+npm install
+npm run build
+npm start
+```
 
-## Demo segura
+Secrets/env mínimos:
+- `OPENAI_API_KEY` somente server-side;
+- `ALLOWED_ORIGINS=https://vfreis.github.io` em produção;
+- `OPENAI_MODEL`, thresholds e limites conforme `api/.env.example`.
 
-`frontend/src/demo.ts` intentionally starts empty. Add a sample only after: (1) the exact real image is licensed/approved for the demo, (2) it has been analyzed by the live backend, (3) SHA-256 and validation timestamp are recorded, and (4) the stored result is the exact real API result. Do not hand-author a successful classification fixture.
+O endpoint consumido pelo frontend é `POST /api/v1/analyze`. Nunca coloque a chave OpenAI em variável `VITE_*`.
+
+## Demo Segura
+
+`frontend/src/demo.ts` começa propositalmente vazio. Só adicione uma amostra depois de: (1) a imagem real estar aprovada/licenciada para a demo; (2) a imagem exata ter passado pela API live; (3) SHA-256, data de validação e proveniência terem sido registrados; (4) o resultado salvo ser a resposta real obtida. Não escreva manualmente uma classificação de sucesso.

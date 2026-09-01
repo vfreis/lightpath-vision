@@ -1,31 +1,30 @@
 # Braciera Vision
 
-Sales prototype for La Braciera: mobile-first camera/gallery capture, closed-catalog multimodal recognition and preliminary visual-quality signals.
+Protótipo comercial mobile-first de visão computacional para a La Braciera.
 
-## Architecture
+## Integração final
 
-- `frontend/`: React + Vite + TypeScript + Motion, deployable to GitHub Pages.
-- `backend/`: minimal Node/Express API. OpenAI secret stays server-side.
-- `docs/API_CONTRACT.md`: stable response contract.
-- `docs/QA_GO_NO_GO.md`: A4 gate and test matrix.
-- `docs/DEPLOY.md`: deployment instructions.
+- `frontend/`: experiência React + Vite + TypeScript + Motion consolidada pelo A4 a partir dos requisitos/handoff do A2.
+- `api/`: backend Node 22 + TypeScript do A3, integrado sem alterar seus guardrails.
+- `docs/A2_FRONTEND_HANDOFF.md`: evidência/handoff original do A2.
+- `docs/API_CONTRACT.md`: contrato canônico do A3.
+- `docs/QA_GO_NO_GO.md`: gate final do A4.
+
+A jornada é câmera traseira ou galeria → preview/normalização → análise real → `success` ou `inconclusive`; falhas de rede/OpenAI permanecem `error`. O frontend nunca recebe `OPENAI_API_KEY`.
 
 ## Local
 
 ```bash
 npm install
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-npm --workspace backend start
-npm --workspace frontend run dev
+npm --workspace @lightpath/braciera-vision-api run build
+OPENAI_API_KEY=... npm --workspace @lightpath/braciera-vision-api start
+VITE_API_BASE_URL=http://localhost:8787 npm --workspace frontend run dev
 ```
-
-Never place `OPENAI_API_KEY` in a `VITE_*` variable.
 
 ## Demo honesty
 
-`inconclusive` is a correct result. Network/OpenAI failures are errors, never synthetic pizza predictions. Safe-demo fixtures are intentionally empty until backed by a real image hash and a real API result.
+`inconclusive` é um comportamento correto. A Demo Segura permanece vazia até existir imagem real aprovada, hash/proveniência e resultado obtido pela mesma API. Nenhuma classificação bem-sucedida é criada manualmente.
 
 ## Brand gate
 
-The A1 Vault note available during A4 integration contained its initial mission but no completed asset/token handoff. The UI therefore uses an explicitly neutral presentation system and does not claim its colors/fonts as official La Braciera tokens. Replace those presentation tokens only with verified official assets/tokens.
+O handoff final do A1 ainda não estava disponível no fechamento A4. Por isso a UI conserva tokens neutros, explicitamente não oficiais, e aguarda assets/tokens verificados antes de ser apresentada como fidelidade visual final da La Braciera.
