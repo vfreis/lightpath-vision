@@ -20,6 +20,7 @@ const MenuItemSchema = z.object({
 });
 
 const CatalogSchema = z.array(MenuItemSchema).min(1);
+const ReferenceImageSchema = z.record(z.string(), z.array(z.string().url()));
 export type MenuItem = z.infer<typeof MenuItemSchema>;
 
 function candidatePaths(): string[] {
@@ -31,6 +32,20 @@ function candidatePaths(): string[] {
     resolve(process.cwd(), "api/data/bootstrap-menu.json"),
     resolve(process.cwd(), "data/bootstrap-menu.json")
   ];
+}
+
+function referencePaths(): string[] {
+  return [
+    resolve(process.cwd(), "data/reference-images.json"),
+    resolve(process.cwd(), "../data/reference-images.json")
+  ];
+}
+
+function loadReferenceImages(): { references: Record<string, string[]>; rawText: string } {
+  const path = referencePaths().find((value) => existsSync(value));
+  if (!path) return { references: {}, rawText: "" };
+  const rawText = readFileSync(path, "utf8");
+  return { references: ReferenceImageSchema.parse(JSON.parse(rawText)), rawText };
 }
 
 function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string } {
@@ -45,8 +60,17 @@ function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string
     if (slugs.has(item.slug)) throw new Error(`duplicate_catalog_slug:${item.slug}`);
     slugs.add(item.slug);
   }
-  const version = `sha256:${createHash("sha256").update(rawText).digest("hex").slice(0, 12)}`;
-  return { items: parsed, sourcePath: path, version };
+
+  const overlay = loadReferenceImages();
+  const items = parsed.map((item) => {
+    const verified = overlay.references[item.slug];
+    if (!verified?.length) return item;
+    return { ...item, referenceImages: [...new Set([...item.referenceImages, ...verified])] };
+  });
+
+  const versionInput = overlay.rawText ? `${rawText}\n${overlay.rawText}` : rawText;
+  const version = `sha256:${createHash("sha256").update(versionInput).digest("hex").slice(0, 12)}`;
+  return { items, sourcePath: path, version };
 }
 
 const loaded = loadCatalog();

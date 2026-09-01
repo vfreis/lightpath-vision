@@ -1,0 +1,22 @@
+/* Verified La Braciera asset overlay. Keep palette tokens conservative until the official brandbook/tokens are verified. */
+:root {
+  --la-braciera-logo-light: url("https://experiencia.labraciera.com.br/cdn/shop/files/logo-light-D1h8MQw-_1.webp?v=1786366284&width=1100");
+}
+
+.topbar > div:first-child strong {
+  display: block;
+  width: 132px;
+  height: 30px;
+  flex: 0 0 132px;
+  overflow: hidden;
+  text-indent: -9999px;
+  white-space: nowrap;
+  background-image: var(--la-braciera-logo-light);
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: contain;
+}
+
+.topbar > div:first-child {
+  align-items: center;
+}
