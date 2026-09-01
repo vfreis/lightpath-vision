@@ -36,12 +36,20 @@ export type ApiError = {
   retryable: boolean
 }
 
+export type ApiHealth = {
+  status: 'ok'
+  recognitionClasses: number
+  openaiConfigured: boolean
+  catalogVersion: string
+}
+
 export type DemoSample = {
   id: string
   name: string
   image: string
   sha256: string
   validatedAt: string
+  validatedAgainst: string
   validatedResult: AnalysisResult
   provenance: string
 }
