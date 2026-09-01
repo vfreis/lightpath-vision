@@ -1,52 +1,54 @@
-# A2 Frontend Experience — handoff para A4
+# A2 Frontend Experience — final polish / handoff para A4
 
-## Implementado
+## Estado desta entrega
 
-- React + Vite + TypeScript, `base: /lightpath-vision/` e workflow de GitHub Pages.
-- Jornada mobile-first: home -> câmera traseira ou galeria -> preview -> análise -> success/inconclusive/error -> nova análise.
-- Câmera via `getUserMedia`, `facingMode: environment`, shutter em canvas e feedback de permissão/indisponibilidade.
-- Normalização local com `createImageBitmap`, orientação `from-image`, resize para maior aresta de 1600 px e JPEG 0.86.
-- `FormData` para `POST {VITE_API_BASE_URL}/analyze`; nenhum segredo no client.
-- Motion for React com `AnimatePresence`, `layoutId="captured-pizza"`, spring no resultado, stagger, scan visual e `MotionConfig reducedMotion="user"`.
-- Safe areas iOS, targets mobile, estados de loading, erro e inconclusive.
+Branch: `agent/a2-final-polish`, criada diretamente da `main` já reconciliada pelo Tech Lead.
 
-## Contrato esperado do A3
+O frontend preserva a arquitetura canônica React + Vite + TypeScript + Motion e não altera a stack `api/`.
 
-Resposta JSON compatível com:
+## Implementado / preservado
 
-- `status`: `success | inconclusive | error`
-- `pizzaId`, `pizzaName`
-- `confidenceLabel`, `confidenceScore`
-- `alternatives[]`
-- `ingredients[]`
-- `referenceImage`
-- `qualitySignals[]` com `{ label, state, detail }`
-- `warnings[]`
-- `nutritionSource`
-- `message`
+- jornada mobile-first: home -> câmera traseira ou galeria -> preview -> análise -> `success | inconclusive | error` -> nova análise;
+- câmera via `getUserMedia`, preferindo `facingMode: environment`, agora com estado de câmera pronta, shutter bloqueado antes de `videoWidth` válido e microflash de captura;
+- câmera mais imersiva em composição próxima de 9:16, mantendo galeria e fechamento acessíveis a uma mão;
+- normalização local da imagem antes do upload;
+- shared image transition via `layoutId="pizza-photo"` entre preview, análise e resultado;
+- scan visual, stages de análise, spring/transições e microinterações de toque;
+- stagger de ingredientes e sinais de qualidade no resultado;
+- `MotionConfig reducedMotion="user"` + fallback CSS `prefers-reduced-motion`;
+- safe areas iOS e ajuste específico para largura <= 370 px;
+- logo oficial verificado da La Braciera carregado pelo overlay `frontend/src/brand.css`;
+- quando a API devolve `referenceImage`, o resultado agora exibe um bloco de **Referência oficial** com a imagem verificada do catálogo;
+- `Powered by LightPath` permanece secundário.
 
-O frontend não cria fallback fictício: sem `VITE_API_BASE_URL`, falha explicitamente e direciona o usuário para tentar novamente.
+## API / segurança
 
-## Integração A1
+O único valor público de integração é:
 
-`src/styles.css` usa **tokens neutros provisórios explicitamente marcados como fallback**, não como cores oficiais. A4 deve substituir `--ink`, `--muted`, `--bg`, `--surface`, `--line`, `--accent`, `--accent-strong` e tipografia pelos tokens/assets verificados que A1 entregar. Logo oficial também deve substituir o wordmark tipográfico temporário assim que estiver no repo.
+`VITE_API_BASE_URL=https://<host-https-temporario>`
 
-## Validação executada por A2
+O client envia exclusivamente:
 
-- Parsing sintático de `src/App.tsx`, `src/main.tsx` e `vite.config.ts` com TypeScript 5.8.3: OK.
-- Checagem TypeScript estrita adicional com shims locais mínimos para React/Motion/Vite, cobrindo a lógica e tipos próprios do app: OK.
-- `package.json` e `tsconfig.json` validados como JSON.
-- Varredura por literais óbvios de segredo: OK; nenhuma credencial encontrada no código do frontend.
-- O ambiente local do agente não tem acesso de rede ao registry npm/GitHub, portanto dependências reais não puderam ser instaladas localmente.
-- Foi criado o workflow `Frontend check` para executar `npm install && npm run build` no PR. As tentativas do GitHub Actions encerraram antes de qualquer step, com `runner_id: 0` e lista de steps vazia. Assim, **não houve falha de compilação observada**; há um bloqueio/configuração de infraestrutura do Actions que A4 deve resolver ou contornar antes do merge.
+`POST {VITE_API_BASE_URL}/api/v1/analyze`
 
-## Checklist A4
+`OPENAI_API_KEY` não é lida, referenciada ou exposta pelo frontend. A integração também rejeita base HTTP fora de `localhost`/`127.0.0.1`, evitando mixed content acidental no GitHub Pages.
 
-1. Rebase/merge A1 e A3; resolver somente tokens/assets e adapter se o contrato final divergir.
-2. Definir `VITE_API_BASE_URL` no ambiente de build do Pages (URL pública segura, nunca chave).
-3. Fazer o workflow `Frontend check` obter runner e ficar verde; alternativamente rodar `npm install && npm run build` em ambiente com registry disponível.
-4. Verificar o bundle produzido por strings de segredo/credenciais.
-5. Testar HTTPS em Chrome Android e Safari iOS: permissão, câmera traseira, galeria, orientação, 360 px, safe area e reduced motion.
-6. Validar `success`, `inconclusive`, HTTP 4xx/5xx, offline e resposta inválida.
-7. Confirmar CORS do backend para o domínio final do Pages.
-8. Substituir placeholders visuais pelos assets oficiais do A1 antes da reunião.
+A URL HTTPS temporária Hostinger ainda não foi fornecida nesta execução. Assim que existir, A4 deve definir apenas `VITE_API_BASE_URL` no ambiente de build/Pages; nenhum código precisa ser alterado para trocar o host.
+
+## Brand / assets
+
+A `main` recebeu o logo oficial verificado e um overlay de imagens oficiais de referência para pizzas. O A2 usa esses assets existentes sem reivindicar que a paleta neutra atual seja o brand book oficial. `styles.css` mantém tokens conservadores e direção visual premium/fogo/forno somente como atmosfera, até existirem tokens oficiais completos verificados.
+
+## Gate técnico para A4
+
+1. CI `QA` deve executar `npm install`, typecheck/test/build da API, build do frontend e secret scan.
+2. Definir `VITE_API_BASE_URL` com a URL HTTPS temporária Hostinger.
+3. Confirmar backend com `OPENAI_API_KEY` somente server-side e CORS permitindo `https://vfreis.github.io`.
+4. Validar `POST /api/v1/analyze` em `success`, `inconclusive`, erros HTTP, falha OpenAI e offline.
+5. Smoke físico em Safari iOS e Chrome Android: câmera traseira, galeria, orientação, safe area, 360 px e reduced motion.
+6. Verificar carregamento do logo oficial e das referências oficiais em rede móvel/Wi-Fi da apresentação.
+7. Manter Demo Segura bloqueada até haver fotos reais pré-validadas pela mesma API com proveniência.
+
+## Definition of done do A2
+
+O código está pronto para integração/deploy assim que a URL HTTPS do backend for conhecida. O único gate externo remanescente ao frontend é a configuração dessa URL e a execução verde do CI/smoke em dispositivos reais.
