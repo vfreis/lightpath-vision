@@ -1,0 +1,10 @@
+{
+  "name": "lightpath-vision",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "build": "npm --workspace frontend run build",
+    "test": "npm --workspace backend test",
+    "check": "npm run test && npm run build"
+  }
+}

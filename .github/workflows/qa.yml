@@ -1,0 +1,20 @@
+name: QA
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm --workspace backend test
+      - run: npm --workspace frontend run build
+      - name: Secret scan guard
+        run: |
+          if grep -R --exclude-dir=node_modules --exclude='*.md' -nE 'sk-[A-Za-z0-9_-]{20,}' frontend backend; then
+            echo 'Possible OpenAI secret found in repository'; exit 1
+          fi
