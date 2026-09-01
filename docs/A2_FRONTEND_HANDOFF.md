@@ -34,16 +34,19 @@ O frontend não cria fallback fictício: sem `VITE_API_BASE_URL`, falha explicit
 ## Validação executada por A2
 
 - Parsing sintático de `src/App.tsx`, `src/main.tsx` e `vite.config.ts` com TypeScript 5.8.3: OK.
+- Checagem TypeScript estrita adicional com shims locais mínimos para React/Motion/Vite, cobrindo a lógica e tipos próprios do app: OK.
 - `package.json` e `tsconfig.json` validados como JSON.
-- Varredura por literais óbvios de segredo: OK.
-- O ambiente local do agente não tem acesso de rede ao registry npm/GitHub, então o bundle final não pôde ser instalado/gerado localmente; o workflow de Pages deve ser usado por A4 para a validação de build real.
+- Varredura por literais óbvios de segredo: OK; nenhuma credencial encontrada no código do frontend.
+- O ambiente local do agente não tem acesso de rede ao registry npm/GitHub, portanto dependências reais não puderam ser instaladas localmente.
+- Foi criado o workflow `Frontend check` para executar `npm install && npm run build` no PR. As tentativas do GitHub Actions encerraram antes de qualquer step, com `runner_id: 0` e lista de steps vazia. Assim, **não houve falha de compilação observada**; há um bloqueio/configuração de infraestrutura do Actions que A4 deve resolver ou contornar antes do merge.
 
 ## Checklist A4
 
 1. Rebase/merge A1 e A3; resolver somente tokens/assets e adapter se o contrato final divergir.
 2. Definir `VITE_API_BASE_URL` no ambiente de build do Pages (URL pública segura, nunca chave).
-3. Rodar `npm install && npm run build` e verificar bundle sem segredos.
-4. Testar HTTPS em Chrome Android e Safari iOS: permissão, câmera traseira, galeria, orientação, 360 px, safe area e reduced motion.
-5. Validar `success`, `inconclusive`, HTTP 4xx/5xx, offline e resposta inválida.
-6. Confirmar CORS do backend para o domínio final do Pages.
-7. Substituir placeholders visuais pelos assets oficiais do A1 antes da reunião.
+3. Fazer o workflow `Frontend check` obter runner e ficar verde; alternativamente rodar `npm install && npm run build` em ambiente com registry disponível.
+4. Verificar o bundle produzido por strings de segredo/credenciais.
+5. Testar HTTPS em Chrome Android e Safari iOS: permissão, câmera traseira, galeria, orientação, 360 px, safe area e reduced motion.
+6. Validar `success`, `inconclusive`, HTTP 4xx/5xx, offline e resposta inválida.
+7. Confirmar CORS do backend para o domínio final do Pages.
+8. Substituir placeholders visuais pelos assets oficiais do A1 antes da reunião.
