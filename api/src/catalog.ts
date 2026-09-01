@@ -15,6 +15,7 @@ const MenuItemSchema = z.object({
   confidenceTier: z.enum(["A", "B", "C"]),
   recognitionEnabled: z.boolean(),
   referenceImages: z.array(z.string()).default([]),
+  availabilityStatus: z.enum(["current_listed", "current_listed_unverified", "availability_conflict"]).optional(),
   notes: z.string().optional()
 });
 
@@ -56,12 +57,13 @@ export const enabledCatalog = catalog.filter((item) => item.recognitionEnabled);
 export const enabledBySlug = new Map(enabledCatalog.map((item) => [item.slug, item]));
 
 export function publicCatalog() {
-  return enabledCatalog.map(({ slug, displayName, category, ingredients, referenceImages, confidenceTier }) => ({
+  return enabledCatalog.map(({ slug, displayName, category, ingredients, referenceImages, confidenceTier, availabilityStatus }) => ({
     pizzaId: slug,
     pizzaName: displayName,
     category,
     ingredients: ingredients ?? [],
     referenceImage: referenceImages[0] ?? null,
-    confidenceTier
+    confidenceTier,
+    availabilityStatus: availabilityStatus ?? "current_listed_unverified"
   }));
 }
