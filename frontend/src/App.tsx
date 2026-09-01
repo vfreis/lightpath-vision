@@ -9,11 +9,20 @@ import type { AnalysisResult } from './types'
 type View = 'home' | 'camera' | 'preview' | 'analyzing' | 'result' | 'error'
 
 const stages = ['Lendo formato', 'Comparando com o cardápio', 'Avaliando padrão visual']
+const springResult = { type: 'spring', stiffness: 245, damping: 24, mass: .82 } as const
+const staggerContainer = { hidden: {}, show: { transition: { staggerChildren: .065, delayChildren: .04 } } } as const
+const staggerItem = { hidden: { opacity: 0, y: 9 }, show: { opacity: 1, y: 0 } } as const
 
 function confidenceText(result: AnalysisResult) {
   if (result.status === 'inconclusive') return 'Inconclusivo'
-  if (result.confidenceScore == null) return result.confidenceLabel
-  return `${Math.round(result.confidenceScore * 100)}% de confiança`
+  if (result.confidenceScore != null) return `${Math.round(result.confidenceScore * 100)}% de confiança`
+  const labels: Record<AnalysisResult['confidenceLabel'], string> = {
+    high: 'Confiança alta',
+    medium: 'Confiança média',
+    low: 'Confiança baixa',
+    unavailable: 'Confiança não calibrada',
+  }
+  return labels[result.confidenceLabel]
 }
 
 export default function App() {
@@ -147,19 +156,19 @@ export default function App() {
       <main className="app-shell">
         <header className="topbar">
           <div><strong>LA BRACIERA</strong><span>VISION</span></div>
-          <div className="live-pill"><span className={canLive ? 'dot on' : 'dot'} />{canLive ? 'LIVE pronto' : 'API pendente'}</div>
+          <div className="live-pill"><span className={canLive ? 'dot on' : 'dot'} />{canLive ? 'Análise ativa' : 'API pendente'}</div>
         </header>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           {view === 'home' && (
-            <motion.section key="home" className="screen home" initial={{ opacity: 0, y: reduced ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div className="eyebrow"><Sparkles size={15}/> Visão computacional aplicada à excelência</div>
-              <h1>Do forno ao padrão.<br/><em>Em uma foto.</em></h1>
-              <p className="lead">Reconheça pizzas do catálogo controlado e visualize sinais preliminares de qualidade — sem transformar incerteza em resposta falsa.</p>
-              <div className="action-stack">
-                <button className="primary" onClick={openCamera}><Camera/> Tirar foto</button>
-                <button className="secondary" onClick={() => fileRef.current?.click()}><Upload/> Anexar da galeria</button>
-              </div>
+            <motion.section key="home" className="screen home" initial={{ opacity: 0, y: reduced ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : -6 }}>
+              <motion.div className="eyebrow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduced ? 0 : .05 }}><Sparkles size={15}/> Visão computacional aplicada à excelência</motion.div>
+              <motion.h1 initial={{ opacity: 0, y: reduced ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduced ? 0 : .08 }}>Do forno ao padrão.<br/><em>Em uma foto.</em></motion.h1>
+              <motion.p className="lead" initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduced ? 0 : .14 }}>Reconheça pizzas do catálogo controlado e visualize sinais preliminares de qualidade — sem transformar incerteza em resposta falsa.</motion.p>
+              <motion.div className="action-stack" initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduced ? 0 : .2 }}>
+                <motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={openCamera}><Camera/> Tirar foto</motion.button>
+                <motion.button className="secondary" whileTap={reduced ? undefined : { scale: .985 }} onClick={() => fileRef.current?.click()}><Upload/> Anexar da galeria</motion.button>
+              </motion.div>
               <div className="mode-grid">
                 <div className="mode-card"><span>LIVE</span><b>Câmera ou upload real</b><small>{canLive ? 'Conectado à API remota.' : 'Disponível assim que VITE_API_BASE_URL for configurada.'}</small></div>
                 <div className="mode-card"><span>DEMO SEGURA</span><b>Fotos reais pré-validadas</b><small>{canSafeDemo ? `${DEMO_SAMPLES.length} amostra(s) validada(s).` : 'Bloqueada até existirem imagens + resultados reais com proveniência.'}</small></div>
@@ -169,57 +178,59 @@ export default function App() {
           )}
 
           {view === 'camera' && (
-            <motion.section key="camera" className="screen camera-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.section key="camera" className="camera-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="camera-frame">
                 <video ref={videoRef} playsInline muted className="camera-video" />
+                <div className="camera-shade" aria-hidden="true"/>
                 <div className="pizza-guide" aria-hidden="true" />
+                <div className="camera-guide-copy"><b>Enquadre a pizza inteira</b><span>Deixe uma pequena margem ao redor.</span></div>
                 {cameraError && <div className="camera-message"><XCircle/><p>{cameraError}</p></div>}
               </div>
-              <p className="camera-tip">Enquadre a pizza inteira e deixe uma pequena margem ao redor.</p>
               <div className="camera-controls">
-                <button className="icon-action" onClick={() => fileRef.current?.click()} aria-label="Abrir galeria"><ImageIcon/></button>
-                <button className="shutter" onClick={capture} aria-label="Capturar foto" disabled={!!cameraError}><span/></button>
-                <button className="icon-action" onClick={reset} aria-label="Fechar câmera"><XCircle/></button>
+                <motion.button className="icon-action" whileTap={reduced ? undefined : { scale: .9 }} onClick={() => fileRef.current?.click()} aria-label="Abrir galeria"><ImageIcon/></motion.button>
+                <motion.button className="shutter" whileTap={reduced ? undefined : { scale: .9 }} onClick={capture} aria-label="Capturar foto" disabled={!!cameraError}><span/></motion.button>
+                <motion.button className="icon-action" whileTap={reduced ? undefined : { scale: .9 }} onClick={reset} aria-label="Fechar câmera"><XCircle/></motion.button>
               </div>
             </motion.section>
           )}
 
           {view === 'preview' && preview && (
-            <motion.section key="preview" className="screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="section-label">PREVIEW</div>
+            <motion.section key="preview" className="screen preview-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="section-label">FOTO PRONTA</div>
               <motion.img layoutId="pizza-photo" src={preview} className="photo-card" alt="Foto selecionada da pizza" />
-              <h2>Boa foto?</h2><p>Confirme para iniciar a análise. A imagem já foi orientada e reduzida antes do envio.</p>
-              <div className="action-stack"><button className="primary" onClick={analyze}><Sparkles/> Analisar pizza</button><button className="secondary" onClick={reset}><RotateCcw/> Refazer</button></div>
+              <h2>Esta imagem está boa?</h2><p>Prefira a pizza inteira no quadro e uma pequena margem ao redor.</p>
+              <div className="action-stack"><motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={analyze}><Sparkles/> Analisar pizza</motion.button><motion.button className="secondary" whileTap={reduced ? undefined : { scale: .985 }} onClick={reset}><RotateCcw/> Refazer</motion.button></div>
             </motion.section>
           )}
 
           {view === 'analyzing' && preview && (
-            <motion.section key="analyzing" className="screen analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.section key="analyzing" className="screen analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} aria-live="polite">
               <div className="section-label">ANÁLISE EM CURSO</div>
               <div className="scan-wrap"><motion.img layoutId="pizza-photo" src={preview} className="photo-card" alt="Pizza em análise"/><div className="scan-line" /></div>
-              <div className="stage-list">{stages.map((s, i) => <div key={s} className={i <= stage ? 'stage active' : 'stage'}>{i < stage ? <CheckCircle2/> : <span className="stage-dot"/>}<span>{s}</span></div>)}</div>
+              <div className="stage-list">{stages.map((s, i) => <motion.div key={s} className={i <= stage ? 'stage active' : 'stage'} animate={{ opacity: i <= stage ? 1 : .36, x: i <= stage && !reduced ? 2 : 0 }} transition={{ duration: .22 }}>{i < stage ? <CheckCircle2/> : <span className="stage-dot"/>}<span>{s}</span></motion.div>)}</div>
               <small className="latency-note">Os estágios são feedback de interface; a conclusão só aparece após resposta real da API.</small>
             </motion.section>
           )}
 
           {view === 'result' && result && preview && (
-            <motion.section key="result" className="screen result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.section key="result" className="screen result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} aria-live="polite">
               <motion.img layoutId="pizza-photo" src={preview} className="photo-card" alt="Pizza analisada"/>
-              <div className={`result-status ${statusTone}`}>{result.status === 'success' ? 'Reconhecimento' : 'Decisão segura'}</div>
-              <motion.h2 initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }}>{result.status === 'success' ? result.pizzaName : 'Não tenho confiança suficiente'}</motion.h2>
-              <p className="confidence">{confidenceText(result)}</p>
+              <motion.div className={`result-status ${statusTone}`} initial={{ opacity: 0, scale: reduced ? 1 : .96 }} animate={{ opacity: 1, scale: 1 }} transition={springResult}>{result.status === 'success' ? 'Reconhecimento' : 'Decisão segura'}</motion.div>
+              <motion.h2 initial={{ opacity: 0, y: reduced ? 0 : 11, scale: reduced ? 1 : .985 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={springResult}>{result.status === 'success' ? result.pizzaName : 'Não tenho confiança suficiente'}</motion.h2>
+              <motion.p className="confidence" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduced ? 0 : .08 }}>{confidenceText(result)}</motion.p>
               {result.status === 'inconclusive' && <p>Esta foto não oferece evidência suficiente para escolher uma pizza do catálogo com segurança.</p>}
-              {result.ingredients.length > 0 && <div className="panel"><h3>Ingredientes do catálogo</h3><div className="chips">{result.ingredients.map(x => <span key={x}>{x}</span>)}</div></div>}
-              {result.qualitySignals.length > 0 && <div className="panel"><h3>Prévia de padrão visual</h3><p className="panel-caption">Sinais experimentais; não são critérios oficiais de QA da La Braciera.</p>{result.qualitySignals.map(q => <div className="quality" key={q.label}><i className={q.state}/><div><b>{q.label}</b><small>{q.detail}</small></div></div>)}</div>}
+              {result.ingredients.length > 0 && <motion.div className="panel" variants={staggerContainer} initial="hidden" animate="show"><h3>Ingredientes do catálogo</h3><div className="chips">{result.ingredients.map(x => <motion.span variants={staggerItem} key={x}>{x}</motion.span>)}</div></motion.div>}
+              {result.referenceImage && <motion.div className="panel reference-panel" initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduced ? 0 : .1 }}><div className="panel-heading"><h3>Referência oficial</h3><span>cardápio</span></div><motion.img layoutId={`reference-${result.pizzaId ?? 'pizza'}`} src={result.referenceImage} alt={`Referência oficial de ${result.pizzaName ?? 'pizza'}`}/></motion.div>}
+              {result.qualitySignals.length > 0 && <div className="panel"><h3>Prévia de padrão visual</h3><p className="panel-caption">Sinais experimentais; não são critérios oficiais de QA da La Braciera.</p>{result.qualitySignals.map((q, i) => <motion.div className="quality" key={q.label} initial={{ opacity: 0, x: reduced ? 0 : -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: reduced ? 0 : .07 * i }}><i className={q.state}/><div><b>{q.label}</b><small>{q.detail}</small></div></motion.div>)}</div>}
               {result.alternatives.length > 0 && <details className="panel"><summary>Alternativas <ChevronDown size={18}/></summary>{result.alternatives.map(a => <div className="alternative" key={a.pizzaId}><span>{a.pizzaName}</span><small>{a.confidenceScore == null ? '—' : `${Math.round(a.confidenceScore * 100)}%`}</small></div>)}</details>}
               {result.warnings.length > 0 && <div className="warning-box">{result.warnings.join(' ')}</div>}
-              <button className="primary" onClick={reset}><RotateCcw/> Nova análise</button>
+              <motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={reset}><RotateCcw/> Nova análise</motion.button>
             </motion.section>
           )}
 
           {view === 'error' && (
-            <motion.section key="error" className="screen error-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <XCircle size={42}/><div className="section-label">ERRO REAL</div><h2>A análise não foi concluída.</h2><p>{error}</p><p className="truth-note">Nenhum fallback de pizza foi exibido.</p><button className="primary" onClick={reset}><RotateCcw/> Tentar novamente</button>
+            <motion.section key="error" className="screen error-screen" initial={{ opacity: 0, y: reduced ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} aria-live="assertive">
+              <XCircle size={42}/><div className="section-label">ERRO REAL</div><h2>A análise não foi concluída.</h2><p>{error}</p><p className="truth-note">Nenhum fallback de pizza foi exibido.</p><motion.button className="primary" whileTap={reduced ? undefined : { scale: .985 }} onClick={reset}><RotateCcw/> Tentar novamente</motion.button>
             </motion.section>
           )}
         </AnimatePresence>
