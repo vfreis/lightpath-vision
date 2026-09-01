@@ -1,9 +1,21 @@
-import type { AnalysisResult, ApiError } from '../types'
+import type { AnalysisResult, ApiError, ApiHealth } from '../types'
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 export function apiConfigured() {
   return Boolean(BASE)
+}
+
+export function apiBaseUrl() {
+  return BASE
+}
+
+export async function getApiHealth(signal?: AbortSignal): Promise<ApiHealth> {
+  if (!BASE) throw new Error('API_NOT_CONFIGURED')
+  const response = await fetch(`${BASE}/healthz`, { signal, cache: 'no-store' })
+  const data = await response.json().catch(() => null) as ApiHealth | null
+  if (!response.ok || !data || data.status !== 'ok') throw new Error(`HEALTH_HTTP_${response.status}`)
+  return data
 }
 
 export async function analyzePizza(file: File, signal?: AbortSignal): Promise<AnalysisResult> {
