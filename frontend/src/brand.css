@@ -20,3 +20,32 @@
 .topbar > div:first-child {
   align-items: center;
 }
+
+.demo-samples {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.demo-samples button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255,255,255,.04);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  text-align: left;
+  font-size: 11px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.demo-samples button svg {
+  flex: 0 0 auto;
+  color: var(--ok);
+}
