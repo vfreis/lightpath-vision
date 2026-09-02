@@ -54,23 +54,50 @@ function classifiedImageContent(image: Buffer): any[] {
 function rerankUserContent(image: Buffer, items: MenuItem[], hardNegatives: HardNegative[]): any[] {
   const content = classifiedImageContent(image);
   let imageBudget = config.MAX_REFERENCE_IMAGES;
+  const referencesByItem = new Map(
+    items.map((item) => [item.slug, item.referenceImages.filter(isRemoteImage).slice(0, 2)])
+  );
 
+  // First pass: guarantee one official positive reference for every candidate that has one.
   for (const item of items) {
+    const references = referencesByItem.get(item.slug) ?? [];
     content.push({
       type: "input_text",
-      text: `CANDIDATO — itemId=${item.slug}; itemName=${item.displayName}; family=${item.family}. As imagens seguintes, se houver, são REFERÊNCIAS OFICIAIS POSITIVAS deste candidato.`
+      text: `CANDIDATO — itemId=${item.slug}; itemName=${item.displayName}; family=${item.family}.`
     });
-    for (const reference of item.referenceImages.filter(isRemoteImage).slice(0, 2)) {
-      if (imageBudget <= 0) break;
-      content.push({ type: "input_image", image_url: reference, detail: "low" });
+
+    const primaryReference = references[0];
+    if (primaryReference && imageBudget > 0) {
+      content.push({
+        type: "input_text",
+        text: `REFERÊNCIA OFICIAL POSITIVA PRINCIPAL — itemId=${item.slug}. Use como evidência de identidade visual, não como padrão operacional.`
+      });
+      content.push({ type: "input_image", image_url: primaryReference, detail: "low" });
       imageBudget -= 1;
-    }
-    if (!item.referenceImages.some(isRemoteImage)) {
+    } else if (!primaryReference) {
       content.push({
         type: "input_text",
         text: `SEM REFERÊNCIA OFICIAL REMOTA para itemId=${item.slug}. Para esse candidato use referenceAgreement=unavailable.`
       });
+    } else {
+      content.push({
+        type: "input_text",
+        text: `REFERÊNCIA OFICIAL NÃO ENVIADA POR LIMITE DE ORÇAMENTO para itemId=${item.slug}. Use referenceAgreement=unavailable e não considere este candidato grounded.`
+      });
     }
+  }
+
+  // Second pass: only after every referenced candidate received one image, spend remaining budget on a second view.
+  for (const item of items) {
+    if (imageBudget <= 0) break;
+    const secondaryReference = (referencesByItem.get(item.slug) ?? [])[1];
+    if (!secondaryReference) continue;
+    content.push({
+      type: "input_text",
+      text: `REFERÊNCIA OFICIAL POSITIVA ADICIONAL — itemId=${item.slug}.`
+    });
+    content.push({ type: "input_image", image_url: secondaryReference, detail: "low" });
+    imageBudget -= 1;
   }
 
   for (const record of hardNegatives) {
