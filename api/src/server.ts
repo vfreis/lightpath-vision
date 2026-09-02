@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import cors from "cors";
 import express, { type ErrorRequestHandler, type RequestHandler } from "express";
 import rateLimit from "express-rate-limit";
@@ -66,6 +68,7 @@ app.get("/healthz", (_req, res) => {
     status: "ok",
     recognitionClasses: enabledCatalog.length,
     openaiConfigured: Boolean(config.OPENAI_API_KEY),
+    model: config.OPENAI_MODEL,
     catalogVersion
   });
 });
@@ -85,6 +88,17 @@ app.post("/api/v1/analyze", upload.single("image"), async (req, res, next) => {
     next(error);
   }
 });
+
+// Hostinger single-domain deployment: serve the Vite build from the same Express app.
+const frontendDist = resolve(process.cwd(), "frontend/dist");
+const frontendIndex = resolve(frontendDist, "index.html");
+if (existsSync(frontendIndex)) {
+  app.use(express.static(frontendDist));
+  app.get("/{*splat}", (req, res, next) => {
+    if (req.path === "/healthz" || req.path.startsWith("/api/")) return next();
+    res.sendFile(frontendIndex);
+  });
+}
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const requestId = res.locals.requestId ?? crypto.randomUUID();
@@ -112,6 +126,6 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 app.use(errorHandler);
 
 app.listen(config.PORT, () => {
-  console.log(`Braciera Vision API listening on :${config.PORT}`);
+  console.log(`Braciera Vision listening on :${config.PORT}`);
   console.log(`Catalog: ${catalogSourcePath}; version: ${catalogVersion}; enabled classes: ${enabledCatalog.length}`);
 });
