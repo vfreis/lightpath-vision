@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "glutenFreeDough": {
+    "available": true,
+    "scope": "eligible_individual_pizzas_subject_to_store_availability",
+    "visualInferenceAllowed": false,
+    "label": "Massa sem Glúten",
+    "description": "Massa sem glúten de longa fermentação com Farinha Fioreglut Sem Glúten Caputo 100% italiana.",
+    "crossContactWarning": "Pode conter traços de glúten.",
+    "size": "individual",
+    "additionalPriceBRL": 20,
+    "source": "https://labraciera.com.br/cardapio/completo",
+    "sourceDate": "2026-09-01",
+    "notes": "Não inferir pela imagem. Em produção, obter pelo pedido/SKU/variação selecionada."
+  }
+}
