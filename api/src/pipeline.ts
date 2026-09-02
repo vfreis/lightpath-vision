@@ -2,13 +2,15 @@ import { config } from "./config.js";
 import { rerankWithOpenAI, triageWithOpenAI } from "./openai.js";
 import { assessReferenceBudget, assessRerank, prepareShortlist } from "./recognition.js";
 import type { HierarchicalDecision } from "./schemas.js";
+import { ApiError } from "./util.js";
 
 function terminalTriageReasons(reasons: string[]): string[] {
   return reasons.filter((reason) =>
     reason.startsWith("image_quality_") ||
     reason.startsWith("family_") ||
     reason === "shortlist_below_minimum_3" ||
-    reason === "shortlist_above_maximum_5"
+    reason === "shortlist_above_maximum_5" ||
+    reason === "top_shortlist_candidate_ungrounded"
   );
 }
 
@@ -44,7 +46,15 @@ export async function classifyHierarchically(image: Buffer): Promise<Hierarchica
     return terminalDecision(triage, shortlistIds, hardNegativeIds, referenceAbstention);
   }
 
-  const rerank = await rerankWithOpenAI(image, triage, prepared.items, prepared.hardNegatives);
+  let rerank;
+  try {
+    rerank = await rerankWithOpenAI(image, triage, prepared.items, prepared.hardNegatives);
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "candidate_reference_missing") {
+      return terminalDecision(triage, shortlistIds, hardNegativeIds, ["reference_runtime_unavailable"]);
+    }
+    throw error;
+  }
   const assessment = assessRerank(rerank, prepared.items);
 
   return {
