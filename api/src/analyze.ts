@@ -1,88 +1,144 @@
-import { catalogVersion, enabledBySlug } from "./catalog.js";
-import { config } from "./config.js";
+import { catalogVersion, enabledBySlug, type MenuItem } from "./catalog.js";
+import { abstentionPolicy } from "./recognition-context.js";
+import { assessRerank } from "./recognition.js";
 import { PROMPT_VERSION } from "./prompt.js";
-import type { ConfidenceLabel, ModelDecision, PublicAnalysisResponse } from "./schemas.js";
+import type { ConfidenceLabel, HierarchicalDecision, PublicAnalysisResponse, TriageDecision } from "./schemas.js";
 import { uniqueStrings } from "./util.js";
 
-function confidenceLabel(score: number): ConfidenceLabel {
-  if (score >= 0.90) return "high";
-  if (score >= config.MATCH_THRESHOLD) return "medium";
-  return "low";
+function shortlistItems(decision: HierarchicalDecision): MenuItem[] {
+  return decision.shortlistIds
+    .map((id) => enabledBySlug.get(id))
+    .filter((item): item is MenuItem => Boolean(item));
 }
 
-function safeAlternatives(decision: ModelDecision, predictedPizzaId: string | null) {
+function qualitySignalsFromTriage(triage: TriageDecision): PublicAnalysisResponse["qualitySignals"] {
+  const form = triage.fingerprint.form.slice(0, 2).join("; ");
+  const coverage = triage.fingerprint.coveragePattern.slice(0, 2).join("; ");
+  return {
+    shape: {
+      state: form ? "neutral" : "unknown",
+      observation: form || "Forma não usada como critério operacional nesta etapa."
+    },
+    bake: {
+      state: "unknown",
+      observation: "Assamento não é avaliado como conformidade no pipeline de identidade."
+    },
+    crust: {
+      state: "unknown",
+      observation: "Cornicione não é aprovado/reprovado pelo pipeline de reconhecimento."
+    },
+    toppingDistribution: {
+      state: coverage ? "neutral" : "unknown",
+      observation: coverage || "Distribuição de cobertura não visível de forma suficiente."
+    },
+    expectedIngredients: {
+      state: "unknown",
+      observation: "Presença de ingredientes é evidência de identidade, não critério oficial de qualidade."
+    }
+  };
+}
+
+function alternatives(decision: HierarchicalDecision, selectedId: string | null): PublicAnalysisResponse["alternatives"] {
+  const rankedIds = decision.rerank
+    ? [...decision.rerank.ranking].sort((a, b) => b.heuristicScore - a.heuristicScore).map((candidate) => candidate.itemId)
+    : decision.shortlistIds;
+
   const seen = new Set<string>();
   const result: PublicAnalysisResponse["alternatives"] = [];
-  for (const candidate of [...decision.alternatives].sort((a, b) => b.confidence - a.confidence)) {
-    if (candidate.pizzaId === predictedPizzaId || seen.has(candidate.pizzaId)) continue;
-    const item = enabledBySlug.get(candidate.pizzaId);
+  for (const id of rankedIds) {
+    if (id === selectedId || seen.has(id)) continue;
+    const item = enabledBySlug.get(id);
     if (!item) continue;
-    seen.add(candidate.pizzaId);
-    result.push({
-      pizzaId: item.slug,
-      pizzaName: item.displayName,
-      confidenceScore: null
-    });
+    seen.add(id);
+    result.push({ pizzaId: item.slug, pizzaName: item.displayName, confidenceScore: null });
     if (result.length === 3) break;
   }
   return result;
 }
 
-export function finalizeModelDecision(requestId: string, decision: ModelDecision): PublicAnalysisResponse {
-  const predicted = decision.predictedPizzaId ? enabledBySlug.get(decision.predictedPizzaId) : undefined;
-  const warnings = [...decision.warnings];
+function confidenceLabel(decision: HierarchicalDecision, selectedId: string | null): ConfidenceLabel {
+  if (!selectedId || !decision.rerank) return decision.triage.imageQuality.decision === "pass" ? "low" : "unavailable";
+  const selectedRank = decision.rerank.ranking.find((candidate) => candidate.itemId === selectedId);
+  if (selectedRank?.referenceAgreement === "strong" && decision.rerank.contradictions.length === 0) return "high";
+  return "medium";
+}
 
-  const nextBest = decision.alternatives
-    .filter((candidate) => candidate.pizzaId !== decision.predictedPizzaId && enabledBySlug.has(candidate.pizzaId))
-    .sort((a, b) => b.confidence - a.confidence)[0];
+export function finalizeHierarchicalDecision(requestId: string, decision: HierarchicalDecision): PublicAnalysisResponse {
+  const shortlist = shortlistItems(decision);
+  const assessment = decision.rerank ? assessRerank(decision.rerank, shortlist) : null;
+  const accepted = Boolean(assessment?.accepted && decision.abstentionReasons.length === 0);
+  const selected = accepted ? assessment?.selected ?? null : null;
+  const warnings = [
+    ...decision.triage.warnings,
+    ...(decision.rerank?.warnings ?? []),
+    ...(decision.rerank?.contradictions ?? []),
+    ...decision.abstentionReasons.map((reason) => `Abstention: ${reason}.`),
+    "Scores do VLM são heurísticas internas e não probabilidades calibradas.",
+    "Calibração permanece pendente até execução do test set versionado; probabilidade pública é null.",
+    "Sinais de qualidade permanecem separados da identidade e não representam critérios oficiais da La Braciera."
+  ];
 
-  const margin = nextBest ? decision.confidence - nextBest.confidence : 1;
-  const invalidId = Boolean(decision.predictedPizzaId && !predicted);
-  const lowConfidence = decision.confidence < config.MATCH_THRESHOLD;
-  const ambiguous = margin < config.MIN_TOP_MARGIN;
-  const mustBeInconclusive = decision.status === "inconclusive" || !predicted || invalidId || lowConfidence || ambiguous;
+  const evidence = decision.rerank?.decisionEvidence.length
+    ? decision.rerank.decisionEvidence
+    : [...decision.triage.fingerprint.distinctiveSignals, ...decision.triage.imageQuality.observations].slice(0, 6);
 
-  if (invalidId) warnings.push("O modelo retornou um ID fora do catálogo permitido; o resultado foi bloqueado.");
-  if (lowConfidence) warnings.push("Evidência visual insuficiente para uma classificação segura no conjunto da demo.");
-  if (ambiguous) warnings.push("Os principais candidatos ficaram visualmente próximos; o resultado foi marcado como inconclusivo.");
-  warnings.push("A confiança numérica ainda não é calibrada; o MVP expõe apenas uma faixa qualitativa.");
-  warnings.push("Os sinais de qualidade são experimentais e não representam critérios oficiais da La Braciera.");
+  const recognition: PublicAnalysisResponse["recognition"] = {
+    family: decision.triage.family,
+    imageQuality: decision.triage.imageQuality,
+    observedFingerprint: decision.triage.fingerprint,
+    shortlist: shortlist.map((item) => ({ itemId: item.slug, itemName: item.displayName })),
+    referenceGrounded: accepted ? decision.referenceGrounded : false,
+    hardNegativeIds: decision.hardNegativeIds,
+    abstentionReasons: accepted ? [] : decision.abstentionReasons,
+    calibrationStatus: "pending_eval",
+    calibratedProbability: null
+  };
 
-  if (mustBeInconclusive) {
+  if (!accepted || !selected) {
     return {
       requestId,
       status: "inconclusive",
       pizzaId: null,
       pizzaName: null,
-      confidenceLabel: lowConfidence ? "low" : "unavailable",
+      confidenceLabel: confidenceLabel(decision, null),
       confidenceScore: null,
       confidenceCalibrated: false,
-      alternatives: safeAlternatives(decision, null),
+      alternatives: alternatives(decision, null),
       ingredients: [],
       referenceImage: null,
-      qualitySignals: decision.qualitySignals,
-      evidence: decision.evidence,
+      qualitySignals: qualitySignalsFromTriage(decision.triage),
+      evidence,
       warnings: uniqueStrings(warnings),
       nutritionSource: null,
-      meta: { promptVersion: PROMPT_VERSION, catalogVersion }
+      recognition,
+      meta: {
+        promptVersion: PROMPT_VERSION,
+        catalogVersion,
+        abstentionPolicyVersion: abstentionPolicy.version
+      }
     };
   }
 
   return {
     requestId,
     status: "success",
-    pizzaId: predicted.slug,
-    pizzaName: predicted.displayName,
-    confidenceLabel: confidenceLabel(decision.confidence),
+    pizzaId: selected.slug,
+    pizzaName: selected.displayName,
+    confidenceLabel: confidenceLabel(decision, selected.slug),
     confidenceScore: null,
     confidenceCalibrated: false,
-    alternatives: safeAlternatives(decision, predicted.slug),
-    ingredients: predicted.ingredients ?? [],
-    referenceImage: predicted.referenceImages[0] ?? null,
-    qualitySignals: decision.qualitySignals,
-    evidence: decision.evidence,
+    alternatives: alternatives(decision, selected.slug),
+    ingredients: selected.ingredients ?? [],
+    referenceImage: selected.referenceImages[0] ?? null,
+    qualitySignals: qualitySignalsFromTriage(decision.triage),
+    evidence,
     warnings: uniqueStrings(warnings),
     nutritionSource: null,
-    meta: { promptVersion: PROMPT_VERSION, catalogVersion }
+    recognition,
+    meta: {
+      promptVersion: PROMPT_VERSION,
+      catalogVersion,
+      abstentionPolicyVersion: abstentionPolicy.version
+    }
   };
 }
