@@ -1,13 +1,14 @@
 import type { AnalysisResult, ApiError } from '../types'
 
-const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || '').trim()
+const BASE = RAW_BASE.replace(/\/$/, '')
 
 export function apiConfigured() {
-  return Boolean(BASE)
+  // On Hostinger the frontend and API share the same origin, so an empty base is valid.
+  return true
 }
 
 export async function analyzePizza(file: File, signal?: AbortSignal): Promise<AnalysisResult> {
-  if (!BASE) throw new Error('API_NOT_CONFIGURED')
   const form = new FormData()
   form.append('image', file, file.name)
   const response = await fetch(`${BASE}/api/v1/analyze`, { method: 'POST', body: form, signal })
