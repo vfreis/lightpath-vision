@@ -38,7 +38,7 @@ function loadManifest(): Record<string, SupervisedReference> {
 
 const manifest = loadManifest();
 const cropCache = new Map<string, Promise<string | null>>();
-const pageAssetCache = new Map<string, Promise<string[]>>();
+const pageAssetCache = new Map<string, Promise<Map<number, string>>>();
 const pageBufferCache = new Map<string, Promise<Buffer | null>>();
 
 function decodeHtml(value: string): string {
@@ -55,13 +55,24 @@ function attr(tag: string, name: string): string | null {
   return match ? decodeHtml(match[1]) : null;
 }
 
-function isAllowedReferenceUrl(value: string, source: string): boolean {
+function firstSrcsetCandidate(value: string | null): string | null {
+  if (!value) return null;
+  const candidates = decodeHtml(value)
+    .split(",")
+    .map((part) => part.trim().split(/\s+/)[0])
+    .filter(Boolean);
+  return candidates.at(-1) ?? null;
+}
+
+function isPublicHttpsUrl(value: string, source: string): boolean {
   try {
     const url = new URL(value, source);
     if (url.protocol !== "https:") return false;
-    const sourceHost = new URL(source).hostname.replace(/^www\./, "");
-    const host = url.hostname.replace(/^www\./, "");
-    return host === sourceHost || host.endsWith(`.${sourceHost}`);
+    const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    if (host === "localhost" || host === "::1" || host.endsWith(".local")) return false;
+    if (/^(127\.|10\.|192\.168\.|169\.254\.)/.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
   } catch {
     return false;
   }
@@ -76,7 +87,7 @@ async function fetchText(url: string): Promise<string> {
   return response.text();
 }
 
-function extractMenuPageAssets(html: string, source: string): string[] {
+function extractMenuPageAssets(html: string, source: string): Map<number, string> {
   const byPage = new Map<number, string>();
   for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = match[0];
@@ -84,22 +95,22 @@ function extractMenuPageAssets(html: string, source: string): string[] {
     const pageMatch = alt.match(/Card[aá]pio La Braciera,\s*p[aá]gina\s*(\d+)/i);
     if (!pageMatch) continue;
     const page = Number(pageMatch[1]);
-    const src = attr(tag, "src") ?? attr(tag, "data-src");
-    if (!src) continue;
-    const resolved = new URL(src, source).toString();
-    if (!isAllowedReferenceUrl(resolved, source)) continue;
+    const raw = attr(tag, "src") ?? attr(tag, "data-src") ?? firstSrcsetCandidate(attr(tag, "srcset")) ?? firstSrcsetCandidate(attr(tag, "data-srcset"));
+    if (!raw) continue;
+    const resolved = new URL(raw, source).toString();
+    if (!isPublicHttpsUrl(resolved, source)) continue;
     byPage.set(page, resolved);
   }
-  return [...byPage.entries()].sort((a, b) => a[0] - b[0]).map(([, url]) => url);
+  return byPage;
 }
 
-async function pageAssets(source: string): Promise<string[]> {
+async function pageAssets(source: string): Promise<Map<number, string>> {
   const existing = pageAssetCache.get(source);
   if (existing) return existing;
   const promise = (async () => {
     const html = await fetchText(source);
     const assets = extractMenuPageAssets(html, source);
-    if (!assets.length) throw new Error("reference_page_assets_not_found");
+    if (!assets.size) throw new Error("reference_page_assets_not_found");
     return assets;
   })();
   pageAssetCache.set(source, promise);
@@ -114,8 +125,8 @@ async function fetchPageBuffer(source: string, page: number): Promise<Buffer | n
   const promise = (async () => {
     try {
       const assets = await pageAssets(source);
-      const imageUrl = assets[page - 1];
-      if (!imageUrl || !isAllowedReferenceUrl(imageUrl, source)) return null;
+      const imageUrl = assets.get(page);
+      if (!imageUrl || !isPublicHttpsUrl(imageUrl, source)) return null;
       const response = await fetch(imageUrl, {
         headers: { "user-agent": "Mozilla/5.0 (compatible; LightPathVision/1.0; +https://lightpath.tech)" },
         signal: AbortSignal.timeout(12000)
@@ -168,6 +179,7 @@ export async function supervisedReferenceDataUrl(slug: string): Promise<string |
     const metadata = await sharp(page).metadata();
     if (!metadata.width || !metadata.height) return null;
     const crop = scaledCrop(reference, metadata.width, metadata.height);
+    if (crop.width <= 0 || crop.height <= 0) return null;
 
     const image = await sharp(page)
       .extract(crop)
