@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "version": "braciera-hard-negatives-v1",
+  "policy": "Promote a confirmed wrong classification only after preserving the exact image/source, verified ground truth and predicted ID. Eval cases already carry verified ground truth; accepted wrong predictions emitted by the runner are hard-negative candidates.",
+  "confirmed": [],
+  "pendingEvidence": [
+    {
+      "id": "user-confirmed-wrong-2026-09-01",
+      "status": "pending_exact_artifact",
+      "source": "Vault CURRENT_STATE",
+      "known": "The user observed at least one incorrect classification through the live Hostinger upload/gallery flow.",
+      "missing": ["exact image or image SHA-256", "expectedId/family", "predictedId", "requestId if available"],
+      "reason": "Do not invent the label pair. Promote immediately when the exact evidence is recovered."
+    }
+  ]
+}

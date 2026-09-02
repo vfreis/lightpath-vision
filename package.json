@@ -11,6 +11,10 @@
     "start": "node api/dist/src/server.js",
     "test": "npm --workspace @lightpath/braciera-vision-api test",
     "typecheck": "npm --workspace @lightpath/braciera-vision-api run typecheck",
-    "check": "npm run typecheck && npm run test && npm run build"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "eval:validate": "node scripts/validate-eval-manifest.mjs",
+    "eval:run": "node scripts/run-evals-public.mjs",
+    "eval:calibration:collect": "npm --workspace @lightpath/braciera-vision-api run build && node scripts/run-calibration-evals.mjs",
+    "eval:calibrate": "node scripts/calibrate-evals.mjs"
   }
 }
