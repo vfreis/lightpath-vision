@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { MenuItem } from "./catalog.js";
 import type { ConfusionSet, HardNegative } from "./recognition-context.js";
+import { hasOfficialReference } from "./recognition.js";
 import type { TriageDecision } from "./schemas.js";
 
-export const PROMPT_VERSION = "hierarchical-recognition.v2";
+export const PROMPT_VERSION = "hierarchical-recognition.v3-grounded-menu";
 
 const cache = new Map<string, string>();
 
@@ -36,7 +37,7 @@ function catalogFacts(items: MenuItem[]) {
     aliases: item.aliases,
     family: item.family,
     ingredients: item.ingredients ?? [],
-    hasOfficialReference: item.referenceImages.length > 0
+    hasOfficialReference: hasOfficialReference(item)
   }));
 }
 
@@ -61,5 +62,5 @@ export function buildRerankSystemPrompt(
     observations
   }));
 
-  return `${loadPrompt("recognition-rerank.v2.md")}\n\n## Fingerprint observado\n${JSON.stringify(fingerprint, null, 2)}\n\n## Candidatos permitidos nesta etapa\n${JSON.stringify(catalogFacts(items), null, 2)}\n\n## Confusion sets relevantes\n${JSON.stringify(confusionSets, null, 2)}\n\n## Hard negatives confirmados relevantes\n${JSON.stringify(negatives, null, 2)}`;
+  return `${loadPrompt("recognition-rerank.v2.md")}\n\n## Regra V3 de grounding visual\nTodos os candidatos desta etapa possuem referência visual oficial/supervisionada enviada na requisição. Compare visualmente cada candidato; não use apenas ingredientes textuais para desempatar.\n\n## Fingerprint observado\n${JSON.stringify(fingerprint, null, 2)}\n\n## Candidatos permitidos nesta etapa\n${JSON.stringify(catalogFacts(items), null, 2)}\n\n## Confusion sets relevantes\n${JSON.stringify(confusionSets, null, 2)}\n\n## Hard negatives confirmados relevantes\n${JSON.stringify(negatives, null, 2)}`;
 }
