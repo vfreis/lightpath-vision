@@ -12,8 +12,9 @@ O endpoint público continua compatível com o frontend atual. Os campos legados
 2. family router: `pizza | calzone | dolci | other | inconclusive`;
 3. visual fingerprint observável;
 4. shortlist server-validada de 3–5 candidatos;
-5. reranking em segunda chamada, apenas com shortlist + referências oficiais disponíveis + hard negatives confirmados relevantes;
-6. selective classification / abstention.
+5. reference-budget gate: deve ser possível enviar ao menos uma referência oficial para cada candidato do shortlist que declara referência;
+6. reranking em segunda chamada, apenas com shortlist + referências oficiais disponíveis + hard negatives confirmados relevantes;
+7. selective classification / abstention.
 
 Ambas as chamadas usam `gpt-4.1-mini`, Responses API, `store:false` e Structured Outputs/Zod.
 
@@ -73,6 +74,8 @@ Mesmo payload, com `pizzaId`, `pizzaName` e `referenceImage` nulos e `ingredient
 - `image_quality_retry`;
 - `family_other` / `family_inconclusive`;
 - `shortlist_below_minimum_3`;
+- `shortlist_has_no_official_references`;
+- `reference_budget_insufficient`;
 - `heuristic_score_below_policy`;
 - `top_margin_below_policy`;
 - `selected_class_missing_official_reference`;
@@ -95,7 +98,9 @@ Os números `heuristicScore` retornados internamente pelo VLM são usados apenas
 
 ## Referências oficiais
 
-A segunda chamada recebe apenas referências oficiais dos candidatos do shortlist. Se o candidato selecionado não possui referência oficial, a política conservadora atual abstém em vez de aceitar uma classe sem grounding visual. Nenhuma referência ausente é inventada.
+A segunda chamada recebe apenas referências oficiais dos candidatos do shortlist. Antes de chamar o reranker, o servidor verifica se `MAX_REFERENCE_IMAGES` comporta pelo menos uma imagem oficial de cada candidato que possui referência. Primeiro é enviada uma referência por candidato; somente o orçamento restante é usado para segunda vista ou hard negatives com imagem. Assim, um candidato nunca é considerado grounded por uma referência que não chegou ao modelo.
+
+Se nenhum candidato do shortlist possui referência oficial, a pipeline abstém antes da segunda chamada. Se o candidato selecionado não possui referência oficial, a política conservadora também abstém em vez de aceitar uma classe sem grounding visual. Nenhuma referência ausente é inventada.
 
 ## Guardrails
 
