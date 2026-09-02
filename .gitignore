@@ -13,3 +13,8 @@ api/.env
 api/.env.*
 !api/.env.example
 *.log
+
+# Eval source pages are controlled Drive assets pinned by SHA-256 in the manifest.
+evals/v*/sources/*
+!evals/v*/sources/.gitkeep
+evals/results/
