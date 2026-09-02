@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "version": "braciera-confusion-groups-v1",
+  "groups": [
+    {
+      "id": "margherita-red-base",
+      "members": ["margherita", "margherita-verace", "margherita-burrata", "mozzarella", "marinara"],
+      "discriminators": [
+        "Margherita Burrata: burrata inteira central é o principal sinal positivo.",
+        "Margherita: rodelas de tomate fresco visíveis + manjericão + parmesão.",
+        "Margherita Verace: pomodoro/fior di latte/basilico sem burrata central nem rodelas frescas dominantes.",
+        "Mozzarella: cobertura de queijo mais contínua e ausência de folhas/tomate fresco distintivos.",
+        "Marinara: base vermelha sem cobertura de queijo; alho/orégano podem ser discretos."
+      ]
+    },
+    {
+      "id": "calabresa-charcuterie",
+      "members": ["calabresa", "casteloes", "zozzona", "italiana-speciale"],
+      "discriminators": [
+        "Calabresa: calabresa + muitas rodelas de cebola roxa; sem mozzarella dominante.",
+        "Castelões: calabresa com mozzarella, sem cebola roxa dominante.",
+        "Zozzona: calabresa + guanciale + dollops de creme de pecorino + basilico.",
+        "Italiana Speciale: calabresa + tomate cereja + parmesão + manjericão fresco."
+      ]
+    },
+    {
+      "id": "burrata-center",
+      "members": ["margherita-burrata", "burrata-al-pesto-e-pepperoni", "burrata-al-pesto-rosso", "caprese"],
+      "discriminators": [
+        "Margherita Burrata: burrata central grande sobre base simples de pomodoro/fior di latte/basilico.",
+        "Burrata al Pesto e Pepperoni: burrata inteira + pepperoni/pimentão/azeitona e pesto escuro/vermelho.",
+        "Burrata al Pesto Rosso: cobertura rosso granulada e burrata distribuída, sem padrão de pepperoni dominante.",
+        "Caprese: rodelas de tomate + mozzarella de búfala em porções menores + pesto/manjericão, não uma única burrata central."
+      ]
+    },
+    {
+      "id": "parma-pork-cheese",
+      "members": ["vero-parma", "don-barbieri", "prima-di-napoli", "porchetta"],
+      "discriminators": [
+        "Vero Parma: presunto de Parma em lâminas largas com brie em tiras/pedaços.",
+        "Don Barbieri: presunto de Parma fino sobre mozzarella com gorgonzola; sem brie em tiras.",
+        "Prima di Napoli: presunto de Parma + stracciatella + raspas de limão siciliano.",
+        "Porchetta: pancetta/porchetta + creme/fonduta/pecorino em dollops; não lâminas frias de Parma."
+      ]
+    },
+    {
+      "id": "dolci-chocolate-pistachio",
+      "members": ["nutella-lindt-brownie", "nutella-brownie-butter-cookies", "pistacchio-italiano-e-nutella", "delizia-rossa"],
+      "discriminators": [
+        "Nutella, Lindt e Brownie: quadrados de chocolate Lindt + pedaços escuros de brownie sobre base Nutella.",
+        "Nutella, Brownie e Butter Cookies: brownie + pedaços claros de butter cookie; sem quadrados Lindt dominantes.",
+        "Pistacchio Italiano e Nutella: grande superfície verde/amarelada de pistache/ganache com padrão de Nutella.",
+        "Delizia Rossa: contraste branco/vermelho de brie/chocolate branco e geleia de frutas vermelhas."
+      ]
+    },
+    {
+      "id": "white-cheese-creamy",
+      "members": ["quattro-formaggi", "mozzarella", "frango-com-catupiry"],
+      "discriminators": [
+        "Quattro Formaggi: cobertura de queijos quase uniforme, sem proteína/topping claramente dominante.",
+        "Mozzarella: base simples de molho + mozzarella + orégano.",
+        "Frango com Catupiry: frango desfiado visível + dollops claros de Catupiry + alecrim."
+      ]
+    },
+    {
+      "id": "calzone-dolci-pending",
+      "members": ["calzone-al-pistacchio", "calzone-smores-nutella-lindt"],
+      "status": "pending_supervised_images",
+      "discriminators": [
+        "Família calzone deve ser decidida antes do sabor: massa fechada/dobrada versus pizza doce aberta.",
+        "Calzone al Pistacchio: acabamento/recheio de pistache esperado; validar em imagem oficial antes de habilitar.",
+        "Calzone S'Mores: sinais de Nutella/chocolate/marshmallow esperados; validar em imagem oficial antes de habilitar."
+      ]
+    }
+  ]
+}
