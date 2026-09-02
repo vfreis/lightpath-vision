@@ -32,8 +32,8 @@ function inferFamily(item: ParsedMenuItem): MenuItem["family"] {
   if (item.family) return item.family;
   const category = item.category.toLocaleLowerCase("pt-BR");
   if (category.includes("calzone")) return "calzone";
-  if (category.includes("doce") || category.includes("dolci") || category.includes("dessert") || category.includes("sobremesa")) return "dolci";
   if (category.includes("pizza")) return "pizza";
+  if (category.includes("dolci") || category.includes("dessert") || category.includes("sobremesa")) return "dolci";
   return "other";
 }
 
@@ -48,11 +48,12 @@ function candidatePaths(): string[] {
   ];
 }
 
+function additionPaths(): string[] {
+  return [resolve(process.cwd(), "data/menu-additions.json"), resolve(process.cwd(), "../data/menu-additions.json")];
+}
+
 function referencePaths(): string[] {
-  return [
-    resolve(process.cwd(), "data/reference-images.json"),
-    resolve(process.cwd(), "../data/reference-images.json")
-  ];
+  return [resolve(process.cwd(), "data/reference-images.json"), resolve(process.cwd(), "../data/reference-images.json")];
 }
 
 function loadReferenceImages(): { references: Record<string, string[]>; rawText: string } {
@@ -62,13 +63,22 @@ function loadReferenceImages(): { references: Record<string, string[]>; rawText:
   return { references: ReferenceImageSchema.parse(JSON.parse(rawText)), rawText };
 }
 
+function loadAdditions(): { items: ParsedMenuItem[]; rawText: string } {
+  const path = additionPaths().find((value) => existsSync(value));
+  if (!path) return { items: [], rawText: "" };
+  const rawText = readFileSync(path, "utf8");
+  return { items: CatalogSchema.parse(JSON.parse(rawText)), rawText };
+}
+
 function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string } {
   const path = candidatePaths().find((value) => existsSync(value));
   if (!path) throw new Error("catalog_not_found");
 
   const rawText = readFileSync(path, "utf8");
-  const raw = JSON.parse(rawText);
-  const parsed = CatalogSchema.parse(raw);
+  const base = CatalogSchema.parse(JSON.parse(rawText));
+  const additions = loadAdditions();
+  const parsed = [...base, ...additions.items];
+
   const slugs = new Set<string>();
   for (const item of parsed) {
     if (slugs.has(item.slug)) throw new Error(`duplicate_catalog_slug:${item.slug}`);
@@ -85,7 +95,7 @@ function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string
     };
   });
 
-  const versionInput = overlay.rawText ? `${rawText}\n${overlay.rawText}` : rawText;
+  const versionInput = [rawText, additions.rawText, overlay.rawText].filter(Boolean).join("\n");
   const version = `sha256:${createHash("sha256").update(versionInput).digest("hex").slice(0, 12)}`;
   return { items, sourcePath: path, version };
 }
