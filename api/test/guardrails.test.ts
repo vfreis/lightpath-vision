@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { finalizeHierarchicalDecision } from "../src/analyze.js";
 import { enabledBySlug } from "../src/catalog.js";
-import { assessRerank, prepareShortlist } from "../src/recognition.js";
+import { assessReferenceBudget, assessRerank, prepareShortlist } from "../src/recognition.js";
 import type { HierarchicalDecision, RerankDecision, TriageDecision } from "../src/schemas.js";
 
 const fingerprint: TriageDecision["fingerprint"] = {
@@ -78,6 +78,17 @@ test("shortlist removes IDs outside routed family/catalog", () => {
     ]
   }));
   assert.equal(prepared.items.some((item) => item.slug === "nutella-lindt-brownie"), false);
+});
+
+test("reference budget requires at least one sendable official reference", () => {
+  const noReference = ["margherita", "margherita-verace", "margherita-burrata"]
+    .map((id) => enabledBySlug.get(id)!).filter(Boolean);
+  assert.deepEqual(assessReferenceBudget(noReference, 8), ["shortlist_has_no_official_references"]);
+
+  const oneReference = ["zozzona", "calabresa", "casteloes"]
+    .map((id) => enabledBySlug.get(id)!).filter(Boolean);
+  assert.deepEqual(assessReferenceBudget(oneReference, 0), ["reference_budget_insufficient"]);
+  assert.deepEqual(assessReferenceBudget(oneReference, 1), []);
 });
 
 test("reference-grounded separated rerank may be accepted without exposing a probability", () => {
