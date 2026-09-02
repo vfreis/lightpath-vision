@@ -1,0 +1,56 @@
+[
+  {
+    "id": "margherita-family",
+    "family": "pizza",
+    "members": ["margherita", "margherita-verace", "margherita-burrata"],
+    "discriminators": [
+      "burrata inteira/centro branco volumoso favorece Margherita Burrata",
+      "pecorino e acabamento mais minimalista favorecem Margherita Verace",
+      "tomate fresco em rodelas e parmesão favorecem Margherita quando visíveis",
+      "não inferir ausência de ingrediente quando estiver coberto pelo queijo"
+    ]
+  },
+  {
+    "id": "calabresa-casteloes-zozzona",
+    "family": "pizza",
+    "members": ["calabresa", "casteloes", "zozzona"],
+    "discriminators": [
+      "cebola roxa aparente favorece Calabresa",
+      "base simples de mozzarella + calabresa favorece Castelões",
+      "guanciale e creme de pecorino junto de calabresa favorecem Zozzona",
+      "não confundir quantidade de proteína com identidade sem outros sinais"
+    ]
+  },
+  {
+    "id": "burrata-pesto",
+    "family": "pizza",
+    "members": ["margherita-burrata", "burrata-al-pesto-e-pepperoni", "burrata-al-pesto-rosso"],
+    "discriminators": [
+      "pepperoni, pimentões e azeitonas favorecem Burrata al Pesto e Pepperoni",
+      "pesto rosso predominante e ausência de pepperoni favorecem Burrata al Pesto Rosso",
+      "perfil margherita simples ao redor de burrata favorece Margherita Burrata"
+    ]
+  },
+  {
+    "id": "parma-white-cheese",
+    "family": "pizza",
+    "members": ["prima-di-napoli", "vero-parma", "don-barbieri", "provola-croccante-di-parma"],
+    "discriminators": [
+      "stracciatella e raspas de limão favorecem Prima di Napoli",
+      "brie + presunto Parma favorecem Vero Parma",
+      "gorgonzola + presunto Parma favorecem Don Barbieri",
+      "pesto verde, tomate-cereja e crispy de Parma favorecem Provola & Croccante di Parma"
+    ]
+  },
+  {
+    "id": "nutella-pistacchio-dolci",
+    "family": "dolci",
+    "members": ["nutella-lindt-brownie", "nutella-brownie-butter-cookies", "pistacchio-italiano-e-nutella", "nocciola-chocolat-du-jour"],
+    "discriminators": [
+      "pistache/creme verde evidente favorece Pistacchio Italiano e Nutella",
+      "brownie + chocolate Lindt sem cookies favorece Nutella, Lindt & Brownie",
+      "butter cookies visíveis favorecem Pizza Nutella, Brownie e Butter Cookies",
+      "pistache caramelizado e elementos de Chocolat du Jour favorecem Nocciola quando realmente visíveis"
+    ]
+  }
+]
