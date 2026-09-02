@@ -3,11 +3,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { config } from "./config.js";
+import type { ProductFamily } from "./schemas.js";
+
+const CatalogFamilySchema = z.enum(["pizza", "calzone", "dolci", "other"]);
 
 const MenuItemSchema = z.object({
   slug: z.string().min(1),
   displayName: z.string().min(1),
   aliases: z.array(z.string()).default([]),
+  family: CatalogFamilySchema.optional(),
   category: z.string().min(1),
   ingredients: z.array(z.string()).nullable(),
   source: z.string().min(1),
@@ -21,7 +25,17 @@ const MenuItemSchema = z.object({
 
 const CatalogSchema = z.array(MenuItemSchema).min(1);
 const ReferenceImageSchema = z.record(z.string(), z.array(z.string().url()));
-export type MenuItem = z.infer<typeof MenuItemSchema>;
+type ParsedMenuItem = z.infer<typeof MenuItemSchema>;
+export type MenuItem = Omit<ParsedMenuItem, "family"> & { family: Exclude<ProductFamily, "inconclusive"> };
+
+function inferFamily(item: ParsedMenuItem): MenuItem["family"] {
+  if (item.family) return item.family;
+  const category = item.category.toLocaleLowerCase("pt-BR");
+  if (category.includes("calzone")) return "calzone";
+  if (category.includes("doce") || category.includes("dolci") || category.includes("dessert") || category.includes("sobremesa")) return "dolci";
+  if (category.includes("pizza")) return "pizza";
+  return "other";
+}
 
 function candidatePaths(): string[] {
   const explicit = config.MENU_CATALOG_PATH ? [resolve(config.MENU_CATALOG_PATH)] : [];
@@ -62,10 +76,13 @@ function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string
   }
 
   const overlay = loadReferenceImages();
-  const items = parsed.map((item) => {
-    const verified = overlay.references[item.slug];
-    if (!verified?.length) return item;
-    return { ...item, referenceImages: [...new Set([...item.referenceImages, ...verified])] };
+  const items: MenuItem[] = parsed.map((item) => {
+    const verified = overlay.references[item.slug] ?? [];
+    return {
+      ...item,
+      family: inferFamily(item),
+      referenceImages: [...new Set([...item.referenceImages, ...verified])]
+    };
   });
 
   const versionInput = overlay.rawText ? `${rawText}\n${overlay.rawText}` : rawText;
@@ -80,10 +97,16 @@ export const catalogVersion = loaded.version;
 export const enabledCatalog = catalog.filter((item) => item.recognitionEnabled);
 export const enabledBySlug = new Map(enabledCatalog.map((item) => [item.slug, item]));
 
+export function enabledCatalogForFamily(family: ProductFamily): MenuItem[] {
+  if (family === "inconclusive") return [];
+  return enabledCatalog.filter((item) => item.family === family);
+}
+
 export function publicCatalog() {
-  return enabledCatalog.map(({ slug, displayName, category, ingredients, referenceImages, confidenceTier, availabilityStatus }) => ({
+  return enabledCatalog.map(({ slug, displayName, family, category, ingredients, referenceImages, confidenceTier, availabilityStatus }) => ({
     pizzaId: slug,
     pizzaName: displayName,
+    family,
     category,
     ingredients: ingredients ?? [],
     referenceImage: referenceImages[0] ?? null,

@@ -6,11 +6,12 @@ import express, { type ErrorRequestHandler, type RequestHandler } from "express"
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import multer from "multer";
-import { finalizeModelDecision } from "./analyze.js";
+import { finalizeHierarchicalDecision } from "./analyze.js";
 import { catalogSourcePath, catalogVersion, enabledCatalog, publicCatalog } from "./catalog.js";
 import { config } from "./config.js";
 import { normalizeImage } from "./image.js";
-import { classifyWithOpenAI } from "./openai.js";
+import { classifyHierarchically } from "./pipeline.js";
+import { abstentionPolicy, confusionSets, hardNegatives } from "./recognition-context.js";
 import type { PublicErrorResponse } from "./schemas.js";
 import { ApiError } from "./util.js";
 
@@ -67,6 +68,11 @@ app.get("/healthz", (_req, res) => {
   res.json({
     status: "ok",
     recognitionClasses: enabledCatalog.length,
+    recognitionPipeline: "hierarchical-v2",
+    confusionSets: confusionSets.length,
+    confirmedHardNegatives: hardNegatives.filter((record) => record.confirmed).length,
+    calibrationStatus: abstentionPolicy.calibrationStatus,
+    abstentionPolicyVersion: abstentionPolicy.version,
     openaiConfigured: Boolean(config.OPENAI_API_KEY),
     model: config.OPENAI_MODEL,
     catalogVersion
@@ -81,8 +87,8 @@ app.post("/api/v1/analyze", upload.single("image"), async (req, res, next) => {
   try {
     if (!req.file) throw new ApiError(400, "image_required", "Envie a imagem no campo multipart 'image'.", false);
     const normalized = await normalizeImage(req.file.buffer);
-    const modelDecision = await classifyWithOpenAI(normalized);
-    const result = finalizeModelDecision(res.locals.requestId, modelDecision);
+    const hierarchicalDecision = await classifyHierarchically(normalized);
+    const result = finalizeHierarchicalDecision(res.locals.requestId, hierarchicalDecision);
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -128,4 +134,5 @@ app.use(errorHandler);
 app.listen(config.PORT, () => {
   console.log(`Braciera Vision listening on :${config.PORT}`);
   console.log(`Catalog: ${catalogSourcePath}; version: ${catalogVersion}; enabled classes: ${enabledCatalog.length}`);
+  console.log(`Recognition: hierarchical-v2; model=${config.OPENAI_MODEL}; calibration=${abstentionPolicy.calibrationStatus}`);
 });

@@ -1,16 +1,19 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { MenuItem } from "./catalog.js";
+import type { ConfusionSet, HardNegative } from "./recognition-context.js";
+import type { TriageDecision } from "./schemas.js";
 
-export const PROMPT_VERSION = "pizza-classifier.v1";
+export const PROMPT_VERSION = "hierarchical-recognition.v2";
 
-let cachedPrompt: string | null = null;
+const cache = new Map<string, string>();
 
-function loadPrompt(): string {
-  if (cachedPrompt) return cachedPrompt;
+function loadPrompt(name: string): string {
+  const cached = cache.get(name);
+  if (cached) return cached;
   const candidates = [
-    resolve(process.cwd(), "prompts/pizza-classifier.v1.md"),
-    resolve(process.cwd(), "api/prompts/pizza-classifier.v1.md")
+    resolve(process.cwd(), `prompts/${name}`),
+    resolve(process.cwd(), `api/prompts/${name}`)
   ];
   const path = candidates.find((candidate) => {
     try {
@@ -20,19 +23,43 @@ function loadPrompt(): string {
       return false;
     }
   });
-  if (!path) throw new Error("prompt_not_found");
-  cachedPrompt = readFileSync(path, "utf8");
-  return cachedPrompt;
+  if (!path) throw new Error(`prompt_not_found:${name}`);
+  const value = readFileSync(path, "utf8");
+  cache.set(name, value);
+  return value;
 }
 
-export function buildSystemPrompt(items: MenuItem[]): string {
-  const allowed = items.map((item) => ({
-    pizzaId: item.slug,
-    pizzaName: item.displayName,
+function catalogFacts(items: MenuItem[]) {
+  return items.map((item) => ({
+    itemId: item.slug,
+    itemName: item.displayName,
     aliases: item.aliases,
-    category: item.category,
-    ingredients: item.ingredients ?? []
+    family: item.family,
+    ingredients: item.ingredients ?? [],
+    hasOfficialReference: item.referenceImages.length > 0
+  }));
+}
+
+export function buildTriageSystemPrompt(items: MenuItem[], confusionSets: ConfusionSet[]): string {
+  const sets = confusionSets.map(({ id, family, members, discriminators }) => ({ id, family, members, discriminators }));
+  return `${loadPrompt("recognition-triage.v2.md")}\n\n## Catálogo permitido\n${JSON.stringify(catalogFacts(items), null, 2)}\n\n## Confusion sets conhecidos\n${JSON.stringify(sets, null, 2)}`;
+}
+
+export function buildRerankSystemPrompt(
+  items: MenuItem[],
+  fingerprint: TriageDecision["fingerprint"],
+  confusionSets: ConfusionSet[],
+  hardNegatives: HardNegative[]
+): string {
+  const negatives = hardNegatives.map(({ id, family, expectedId, predictedId, confusionSet, source, observations }) => ({
+    id,
+    family,
+    expectedId,
+    predictedId,
+    confusionSet,
+    source,
+    observations
   }));
 
-  return `${loadPrompt()}\n\n## Catálogo permitido nesta requisição\n${JSON.stringify(allowed, null, 2)}`;
+  return `${loadPrompt("recognition-rerank.v2.md")}\n\n## Fingerprint observado\n${JSON.stringify(fingerprint, null, 2)}\n\n## Candidatos permitidos nesta etapa\n${JSON.stringify(catalogFacts(items), null, 2)}\n\n## Confusion sets relevantes\n${JSON.stringify(confusionSets, null, 2)}\n\n## Hard negatives confirmados relevantes\n${JSON.stringify(negatives, null, 2)}`;
 }
