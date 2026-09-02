@@ -21,6 +21,24 @@ export function isSupportedRecognitionFamily(family: ProductFamily): boolean {
   return supportedFamilies.has(family);
 }
 
+export function hasRemoteOfficialReference(item: MenuItem): boolean {
+  return item.referenceImages.some((value) => {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" || url.protocol === "http:";
+    } catch {
+      return false;
+    }
+  });
+}
+
+export function assessReferenceBudget(shortlist: MenuItem[], maxReferenceImages: number): string[] {
+  const referencedCandidates = shortlist.filter(hasRemoteOfficialReference).length;
+  if (referencedCandidates === 0) return ["shortlist_has_no_official_references"];
+  if (referencedCandidates > maxReferenceImages) return ["reference_budget_insufficient"];
+  return [];
+}
+
 export function prepareShortlist(triage: TriageDecision): PreparedShortlist {
   const reasons: string[] = [];
   if (triage.imageQuality.decision !== "pass") {
@@ -92,7 +110,7 @@ export function assessRerank(decision: RerankDecision, shortlist: MenuItem[]): A
   const policy = effectivePolicyFor(shortlistIds);
   const score = selectedRank?.heuristicScore ?? 0;
   const margin = selectedRank ? score - (runnerUp?.heuristicScore ?? 0) : 0;
-  const hasOfficialReference = Boolean(selected?.referenceImages.length);
+  const hasOfficialReference = Boolean(selected && hasRemoteOfficialReference(selected));
   const referenceAgreement = selectedRank?.referenceAgreement ?? "unavailable";
   const acceptedReferenceAgreement = policy.acceptedReferenceAgreement.includes(referenceAgreement);
 
