@@ -1,6 +1,6 @@
 import { catalogVersion, enabledBySlug, type MenuItem } from "./catalog.js";
 import { abstentionPolicy } from "./recognition-context.js";
-import { assessRerank } from "./recognition.js";
+import { assessRerank, hasOfficialReference } from "./recognition.js";
 import { PROMPT_VERSION } from "./prompt.js";
 import type { ConfidenceLabel, HierarchicalDecision, PublicAnalysisResponse, TriageDecision } from "./schemas.js";
 import { uniqueStrings } from "./util.js";
@@ -15,43 +15,28 @@ function qualitySignalsFromTriage(triage: TriageDecision): PublicAnalysisRespons
   const form = triage.fingerprint.form.slice(0, 2).join("; ");
   const coverage = triage.fingerprint.coveragePattern.slice(0, 2).join("; ");
   return {
-    shape: {
-      state: form ? "neutral" : "unknown",
-      observation: form || "Forma não usada como critério operacional nesta etapa."
-    },
-    bake: {
-      state: "unknown",
-      observation: "Assamento não é avaliado como conformidade no pipeline de identidade."
-    },
-    crust: {
-      state: "unknown",
-      observation: "Cornicione não é aprovado/reprovado pelo pipeline de reconhecimento."
-    },
-    toppingDistribution: {
-      state: coverage ? "neutral" : "unknown",
-      observation: coverage || "Distribuição de cobertura não visível de forma suficiente."
-    },
-    expectedIngredients: {
-      state: "unknown",
-      observation: "Presença de ingredientes é evidência de identidade, não critério oficial de qualidade."
-    }
+    shape: { state: form ? "neutral" : "unknown", observation: form || "Forma não usada como critério operacional nesta etapa." },
+    bake: { state: "unknown", observation: "Assamento não é avaliado como conformidade no pipeline de identidade." },
+    crust: { state: "unknown", observation: "Cornicione não é aprovado/reprovado pelo pipeline de reconhecimento." },
+    toppingDistribution: { state: coverage ? "neutral" : "unknown", observation: coverage || "Distribuição de cobertura não visível de forma suficiente." },
+    expectedIngredients: { state: "unknown", observation: "Presença de ingredientes é evidência de identidade, não critério oficial de qualidade." }
   };
 }
 
-function alternatives(decision: HierarchicalDecision, selectedId: string | null): PublicAnalysisResponse["alternatives"] {
-  const rankedIds = decision.rerank
-    ? [...decision.rerank.ranking].sort((a, b) => b.heuristicScore - a.heuristicScore).map((candidate) => candidate.itemId)
-    : decision.shortlistIds;
-
+function groundedAlternatives(decision: HierarchicalDecision, selectedId: string): PublicAnalysisResponse["alternatives"] {
+  if (!decision.rerank) return [];
   const seen = new Set<string>();
   const result: PublicAnalysisResponse["alternatives"] = [];
-  for (const id of rankedIds) {
-    if (id === selectedId || seen.has(id)) continue;
-    const item = enabledBySlug.get(id);
-    if (!item) continue;
-    seen.add(id);
+  const ranked = [...decision.rerank.ranking].sort((a, b) => b.heuristicScore - a.heuristicScore);
+
+  for (const candidate of ranked) {
+    if (candidate.itemId === selectedId || seen.has(candidate.itemId)) continue;
+    if (candidate.referenceAgreement !== "strong" && candidate.referenceAgreement !== "partial") continue;
+    const item = enabledBySlug.get(candidate.itemId);
+    if (!item || !hasOfficialReference(item)) continue;
+    seen.add(item.slug);
     result.push({ pizzaId: item.slug, pizzaName: item.displayName, confidenceScore: null });
-    if (result.length === 3) break;
+    if (result.length === 2) break;
   }
   return result;
 }
@@ -103,7 +88,7 @@ export function finalizeHierarchicalDecision(requestId: string, decision: Hierar
       confidenceLabel: confidenceLabel(decision, null),
       confidenceScore: null,
       confidenceCalibrated: false,
-      alternatives: alternatives(decision, null),
+      alternatives: [],
       ingredients: [],
       referenceImage: null,
       qualitySignals: qualitySignalsFromTriage(decision.triage),
@@ -111,11 +96,7 @@ export function finalizeHierarchicalDecision(requestId: string, decision: Hierar
       warnings: uniqueStrings(warnings),
       nutritionSource: null,
       recognition,
-      meta: {
-        promptVersion: PROMPT_VERSION,
-        catalogVersion,
-        abstentionPolicyVersion: abstentionPolicy.version
-      }
+      meta: { promptVersion: PROMPT_VERSION, catalogVersion, abstentionPolicyVersion: abstentionPolicy.version }
     };
   }
 
@@ -127,7 +108,7 @@ export function finalizeHierarchicalDecision(requestId: string, decision: Hierar
     confidenceLabel: confidenceLabel(decision, selected.slug),
     confidenceScore: null,
     confidenceCalibrated: false,
-    alternatives: alternatives(decision, selected.slug),
+    alternatives: groundedAlternatives(decision, selected.slug),
     ingredients: selected.ingredients ?? [],
     referenceImage: selected.referenceImages[0] ?? null,
     qualitySignals: qualitySignalsFromTriage(decision.triage),
@@ -135,10 +116,6 @@ export function finalizeHierarchicalDecision(requestId: string, decision: Hierar
     warnings: uniqueStrings(warnings),
     nutritionSource: null,
     recognition,
-    meta: {
-      promptVersion: PROMPT_VERSION,
-      catalogVersion,
-      abstentionPolicyVersion: abstentionPolicy.version
-    }
+    meta: { promptVersion: PROMPT_VERSION, catalogVersion, abstentionPolicyVersion: abstentionPolicy.version }
   };
 }
