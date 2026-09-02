@@ -1,5 +1,6 @@
+import { config } from "./config.js";
 import { rerankWithOpenAI, triageWithOpenAI } from "./openai.js";
-import { assessRerank, prepareShortlist } from "./recognition.js";
+import { assessReferenceBudget, assessRerank, prepareShortlist } from "./recognition.js";
 import type { HierarchicalDecision } from "./schemas.js";
 
 function terminalTriageReasons(reasons: string[]): string[] {
@@ -11,20 +12,36 @@ function terminalTriageReasons(reasons: string[]): string[] {
   );
 }
 
+function terminalDecision(
+  triage: HierarchicalDecision["triage"],
+  shortlistIds: string[],
+  hardNegativeIds: string[],
+  abstentionReasons: string[]
+): HierarchicalDecision {
+  return {
+    triage,
+    rerank: null,
+    shortlistIds,
+    hardNegativeIds,
+    abstentionReasons,
+    referenceGrounded: false
+  };
+}
+
 export async function classifyHierarchically(image: Buffer): Promise<HierarchicalDecision> {
   const triage = await triageWithOpenAI(image);
   const prepared = prepareShortlist(triage);
+  const shortlistIds = prepared.items.map((item) => item.slug);
+  const hardNegativeIds = prepared.hardNegatives.map((record) => record.id);
   const triageAbstention = terminalTriageReasons(prepared.abstentionReasons);
 
   if (triageAbstention.length > 0) {
-    return {
-      triage,
-      rerank: null,
-      shortlistIds: prepared.items.map((item) => item.slug),
-      hardNegativeIds: prepared.hardNegatives.map((record) => record.id),
-      abstentionReasons: triageAbstention,
-      referenceGrounded: false
-    };
+    return terminalDecision(triage, shortlistIds, hardNegativeIds, triageAbstention);
+  }
+
+  const referenceAbstention = assessReferenceBudget(prepared.items, config.MAX_REFERENCE_IMAGES);
+  if (referenceAbstention.length > 0) {
+    return terminalDecision(triage, shortlistIds, hardNegativeIds, referenceAbstention);
   }
 
   const rerank = await rerankWithOpenAI(image, triage, prepared.items, prepared.hardNegatives);
@@ -33,8 +50,8 @@ export async function classifyHierarchically(image: Buffer): Promise<Hierarchica
   return {
     triage,
     rerank,
-    shortlistIds: prepared.items.map((item) => item.slug),
-    hardNegativeIds: prepared.hardNegatives.map((record) => record.id),
+    shortlistIds,
+    hardNegativeIds,
     abstentionReasons: assessment.accepted ? [] : assessment.reasons,
     referenceGrounded: assessment.referenceGrounded
   };
