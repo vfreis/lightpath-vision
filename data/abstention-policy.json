@@ -1,0 +1,19 @@
+{
+  "version": "precalibration-v1",
+  "calibrationStatus": "pending_eval",
+  "scoreSemantics": "vlm_heuristic_not_probability",
+  "default": {
+    "minHeuristicScore": 0.78,
+    "minMargin": 0.10,
+    "maxContradictions": 1,
+    "requireOfficialReferenceForAcceptedMatch": true,
+    "acceptedReferenceAgreement": ["strong", "partial"]
+  },
+  "confusionSets": {
+    "margherita-family": { "minHeuristicScore": 0.82, "minMargin": 0.14 },
+    "calabresa-casteloes-zozzona": { "minHeuristicScore": 0.82, "minMargin": 0.14 },
+    "burrata-pesto": { "minHeuristicScore": 0.82, "minMargin": 0.14 },
+    "nutella-pistacchio-dolci": { "minHeuristicScore": 0.82, "minMargin": 0.14 }
+  },
+  "notes": "Thresholds are conservative starting values only. They must be replaced/calibrated from the same versioned eval set before any calibrated-probability claim."
+}
