@@ -38,6 +38,8 @@ The recognition path remains:
 
 `bundle observables -> gpt-4.1-mini quality/family/fingerprint -> shortlist -> official-reference rerank -> abstention`
 
+The existing health identifier `recognitionPipeline=hierarchical-v2` is preserved for A4/eval compatibility. The new local layer is reported separately as `qualitySignalPipeline=bundle-observables-v1`.
+
 ## Public API contract
 
 `POST /api/v1/analyze` now explicitly returns:
@@ -61,7 +63,7 @@ Until a client-approved good/bad dataset exists, only:
 - `experimental_attention`
 - `inconclusive`
 
-`experimental_compatible` means only that the POC observation is visually compatible with the identity reference used in that comparison. It does **not** mean approved quality.
+`experimental_compatible` means only that the POC observation is visually compatible with the identity reference used in that comparison. It does **not** mean approved quality. It requires key observables (blur/nitidez, crust/cornicione, shape and radial distribution) to be readable; missing/limited key evidence downgrades to `experimental_attention`.
 
 `experimental_attention` means an observable/photo/reference signal deserves human checking. It does **not** mean rejection.
 
@@ -94,9 +96,10 @@ Internal shortlist/ranking still exists in `HierarchicalDecision` for eval/hard-
 
 ## Health
 
-`GET /healthz` adds:
+`GET /healthz` preserves/adds:
 
-- `recognitionPipeline=hierarchical-v2+bundle-observables`
+- `recognitionPipeline=hierarchical-v2`
+- `qualitySignalPipeline=bundle-observables-v1`
 - `qualitySignalContract=observable-signals.v1`
 - `qualityCalibrationStatus=not_calibrated`
 - `trainingBundleQualityVersion=quality-signal-profile.v1`
@@ -113,11 +116,12 @@ A4 must validate before merge/deploy:
 3. A clear in-catalog photo returns all seven observable signal groups.
 4. `quality_status` is always one of the four allowlisted values.
 5. No response contains an operational approval/rejection/certification claim.
-6. Blur/bad framing produces `inconclusive` or experimental attention, never a quality pass/fail.
+6. Blur/bad framing or unreadable key observables produce `inconclusive` or `experimental_attention`, never a quality pass/fail.
 7. Recognition inconclusive exposes no alternatives and no public shortlist.
 8. Success hydrates predicted item and reference from server catalog, not model text.
 9. `observableSignals.meta.calibratedQuality=false` and health reports `qualityCalibrationStatus=not_calibrated`.
-10. Run live Hostinger smoke with real gallery/camera photos and preserve client `holdout_v1` outside training/tuning.
+10. Health keeps `recognitionPipeline=hierarchical-v2` and reports the quality layer separately.
+11. Run live Hostinger smoke with real gallery/camera photos and preserve client `holdout_v1` outside training/tuning.
 
 ## Calibration gate
 
