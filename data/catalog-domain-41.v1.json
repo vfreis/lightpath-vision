@@ -1,0 +1,121 @@
+{
+  "version": "mvp_gate_d_2026-09-02",
+  "dropSlugs": ["la-diciannove", "nocciola-chocolat-du-jour"],
+  "renameSlugs": {
+    "nutella-lindt-brownie": "nutella-lindt-e-brownie",
+    "nutella-brownie-butter-cookies": "nutella-brownie-e-butter-cookies"
+  },
+  "familyOverrides": {
+    "delizia-rossa": "pizza",
+    "nutella-lindt-e-brownie": "pizza",
+    "pistacchio-italiano-e-nutella": "pizza",
+    "nutella-brownie-e-butter-cookies": "pizza"
+  },
+  "addItems": [
+    {
+      "slug": "pancetta-e-patate",
+      "displayName": "Pancetta e Patate",
+      "aliases": [],
+      "family": "pizza",
+      "category": "pizza_salgada",
+      "ingredients": ["Pancetta", "Fior di latte", "Batata assada", "Gorgonzola"],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "B",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; BOOTSTRAP recognition remains NO-GO."
+    },
+    {
+      "slug": "abbra-cciami",
+      "displayName": "Abbra-Cciami",
+      "aliases": ["Abbracciami", "Abbra-cciami Diego Vitagliano"],
+      "family": "pizza",
+      "category": "pizza_salgada",
+      "ingredients": ["Provola defumada", "Rúcula", "Maionese na brasa", "Carpaccio de wagyu"],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "A",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; BOOTSTRAP recognition remains NO-GO."
+    },
+    {
+      "slug": "calzone-al-pistacchio",
+      "displayName": "Calzone al Pistacchio",
+      "aliases": [],
+      "family": "calzone",
+      "category": "calzone_dolce",
+      "ingredients": ["Ganache de pistache italiano com chocolate branco", "Geleia de frutas vermelhas"],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "A",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; family=calzone explicit; no quality certification."
+    },
+    {
+      "slug": "calzone-smores-nutella-lindt",
+      "displayName": "Calzone S'Mores di Nutella e Lindt",
+      "aliases": ["Calzone S'Mores di Nutella & Lindt"],
+      "family": "calzone",
+      "category": "calzone_dolce",
+      "ingredients": ["Nutella", "Marshmallow", "Chocolate Lindt", "Massa napolitana"],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "A",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; family=calzone explicit; no quality certification."
+    },
+    {
+      "slug": "tiramissu",
+      "displayName": "Tiramissú",
+      "aliases": ["Tiramisù"],
+      "family": "dolci",
+      "category": "dolci",
+      "ingredients": [],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "A",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; ingredient list intentionally not inferred beyond canonical source."
+    },
+    {
+      "slug": "pistacchio-tiramissu",
+      "displayName": "Tiramisù al Pistacchio",
+      "aliases": ["Pistacchio Tiramissú"],
+      "family": "dolci",
+      "category": "dolci",
+      "ingredients": ["Tiramisù", "Pasta de pistache italiano", "Pistache caramelizado crocante"],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "A",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; family=dolci explicit; no quality certification."
+    },
+    {
+      "slug": "torta-cheesecake",
+      "displayName": "Torta Cheesecake",
+      "aliases": ["Cheesecake"],
+      "family": "dolci",
+      "category": "dolci",
+      "ingredients": ["Cheesecake", "Calda de frutas vermelhas"],
+      "source": "04_MENU_DATASET + classes_master mvp_gate_d_2026-09-02",
+      "sourceDate": "2026-09-03",
+      "confidenceTier": "A",
+      "recognitionEnabled": true,
+      "referenceImages": [],
+      "availabilityStatus": "current_listed",
+      "notes": "Frozen 41-class domain sync; family=dolci explicit; no quality certification."
+    }
+  ]
+}
