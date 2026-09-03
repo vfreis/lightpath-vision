@@ -109,7 +109,7 @@ export function buildQualityContract(
       qualityStatus: "experimental_attention",
       qualityNotes: [
         ...notes,
-        safeNote("A montagem apresenta sinais que merecem conferência contra a referência da casa; esta indicação é experimental e não é uma reprovação."),
+        safeNote("A leitura visual tem pontos que merecem conferência contra a referência da casa; esta indicação é experimental e não descreve aprovação ou reprovação do produto."),
         safeNote("Qualidade operacional ainda não calibrada com fotos boas/ruins validadas pela La Braciera.")
       ].slice(0, 6)
     };
