@@ -25,6 +25,13 @@ const MenuItemSchema = z.object({
 
 const CatalogSchema = z.array(MenuItemSchema).min(1);
 const ReferenceImageSchema = z.record(z.string(), z.array(z.string().url()));
+const DomainOverlaySchema = z.object({
+  version: z.string().min(1),
+  dropSlugs: z.array(z.string()).default([]),
+  renameSlugs: z.record(z.string(), z.string()).default({}),
+  familyOverrides: z.record(z.string(), CatalogFamilySchema).default({}),
+  addItems: z.array(MenuItemSchema).default([])
+});
 type ParsedMenuItem = z.infer<typeof MenuItemSchema>;
 export type MenuItem = Omit<ParsedMenuItem, "family"> & { family: Exclude<ProductFamily, "inconclusive"> };
 
@@ -48,6 +55,20 @@ function candidatePaths(): string[] {
   ];
 }
 
+function domainOverlayPaths(): string[] {
+  return [
+    resolve(process.cwd(), "data/catalog-domain-41.v1.json"),
+    resolve(process.cwd(), "../data/catalog-domain-41.v1.json")
+  ];
+}
+
+function loadDomainOverlay(): { overlay: z.infer<typeof DomainOverlaySchema> | null; rawText: string } {
+  const path = domainOverlayPaths().find((value) => existsSync(value));
+  if (!path) return { overlay: null, rawText: "" };
+  const rawText = readFileSync(path, "utf8");
+  return { overlay: DomainOverlaySchema.parse(JSON.parse(rawText)), rawText };
+}
+
 function referencePaths(): string[] {
   return [
     resolve(process.cwd(), "data/reference-images.json"),
@@ -68,7 +89,21 @@ function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string
 
   const rawText = readFileSync(path, "utf8");
   const raw = JSON.parse(rawText);
-  const parsed = CatalogSchema.parse(raw);
+  const parsedBase = CatalogSchema.parse(raw);
+  const domain = loadDomainOverlay();
+  const reverseRename = new Map(Object.entries(domain.overlay?.renameSlugs ?? {}).map(([from, to]) => [to, from]));
+  const dropped = new Set(domain.overlay?.dropSlugs ?? []);
+  const parsed = [
+    ...parsedBase
+      .filter((item) => !dropped.has(item.slug))
+      .map((item) => {
+        const slug = domain.overlay?.renameSlugs[item.slug] ?? item.slug;
+        const family = domain.overlay?.familyOverrides[slug] ?? item.family;
+        return { ...item, slug, family };
+      }),
+    ...(domain.overlay?.addItems ?? [])
+  ];
+
   const slugs = new Set<string>();
   for (const item of parsed) {
     if (slugs.has(item.slug)) throw new Error(`duplicate_catalog_slug:${item.slug}`);
@@ -77,7 +112,8 @@ function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string
 
   const overlay = loadReferenceImages();
   const items: MenuItem[] = parsed.map((item) => {
-    const verified = overlay.references[item.slug] ?? [];
+    const legacySlug = reverseRename.get(item.slug);
+    const verified = overlay.references[item.slug] ?? (legacySlug ? overlay.references[legacySlug] : undefined) ?? [];
     return {
       ...item,
       family: inferFamily(item),
@@ -85,7 +121,7 @@ function loadCatalog(): { items: MenuItem[]; sourcePath: string; version: string
     };
   });
 
-  const versionInput = overlay.rawText ? `${rawText}\n${overlay.rawText}` : rawText;
+  const versionInput = [rawText, domain.rawText, overlay.rawText].filter(Boolean).join("\n");
   const version = `sha256:${createHash("sha256").update(versionInput).digest("hex").slice(0, 12)}`;
   return { items, sourcePath: path, version };
 }
