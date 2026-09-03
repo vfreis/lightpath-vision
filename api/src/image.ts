@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import { config } from "./config.js";
 import { ApiError } from "./util.js";
 
@@ -7,7 +7,7 @@ const allowedFormats = new Set(["jpeg", "png", "webp"]);
 export async function normalizeImage(input: Buffer): Promise<Buffer> {
   if (!input.length) throw new ApiError(400, "empty_image", "A imagem enviada está vazia.", false);
 
-  let metadata: sharp.Metadata;
+  let metadata: Metadata;
   try {
     metadata = await sharp(input, { failOn: "warning" }).metadata();
   } catch {
