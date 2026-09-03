@@ -10,9 +10,12 @@ export type QualitySignals = {
   expectedIngredients: QualitySignal
 }
 
+export type QualityStatus = 'not_calibrated' | 'experimental_compatible' | 'experimental_attention' | 'inconclusive'
+
 export type AnalysisResult = {
   requestId: string
   status: 'success' | 'inconclusive'
+  family?: 'pizza' | 'calzone' | 'dolci' | 'other' | 'inconclusive'
   pizzaId: string | null
   pizzaName: string | null
   confidenceLabel: 'high' | 'medium' | 'low' | 'unavailable'
@@ -22,6 +25,9 @@ export type AnalysisResult = {
   ingredients: string[]
   referenceImage: string | null
   qualitySignals: QualitySignals
+  observableSignals?: Record<string, unknown>
+  quality_status?: QualityStatus
+  quality_notes?: string[]
   evidence: string[]
   warnings: string[]
   nutritionSource: null

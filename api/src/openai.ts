@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { enabledCatalog, type MenuItem } from "./catalog.js";
 import { confusionSets, confusionSetsForIds, type HardNegative } from "./recognition-context.js";
 import { buildRerankSystemPrompt, buildTriageSystemPrompt } from "./prompt.js";
+import { serializeObservableSignalsForModel, type ObservableSignals } from "./quality-signals.js";
 import {
   RerankDecisionSchema,
   TriageDecisionSchema,
@@ -37,11 +38,15 @@ function isRemoteImage(value: string): boolean {
   }
 }
 
-function classifiedImageContent(image: Buffer): any[] {
+function classifiedImageContent(image: Buffer, observableSignals: ObservableSignals): any[] {
   return [
     {
       type: "input_text",
       text: "IMAGEM A CLASSIFICAR. Siga os gates do schema e não force uma identidade."
+    },
+    {
+      type: "input_text",
+      text: `SINAIS LOCAIS DO BUNDLE DE TREINO (evidência complementar, NÃO veredito de qualidade e NÃO probabilidade): ${serializeObservableSignalsForModel(observableSignals)}`
     },
     {
       type: "input_image",
@@ -51,8 +56,13 @@ function classifiedImageContent(image: Buffer): any[] {
   ];
 }
 
-function rerankUserContent(image: Buffer, items: MenuItem[], hardNegatives: HardNegative[]): any[] {
-  const content = classifiedImageContent(image);
+function rerankUserContent(
+  image: Buffer,
+  items: MenuItem[],
+  hardNegatives: HardNegative[],
+  observableSignals: ObservableSignals
+): any[] {
+  const content = classifiedImageContent(image, observableSignals);
   let imageBudget = config.MAX_REFERENCE_IMAGES;
   const referencesByItem = new Map(
     items.map((item) => [item.slug, item.referenceImages.filter(isRemoteImage).slice(0, 2)])
@@ -129,7 +139,7 @@ function mapOpenAIError(error: unknown): never {
   throw new ApiError(502, "openai_unknown_error", "A análise visual falhou inesperadamente.", true);
 }
 
-export async function triageWithOpenAI(image: Buffer): Promise<TriageDecision> {
+export async function triageWithOpenAI(image: Buffer, observableSignals: ObservableSignals): Promise<TriageDecision> {
   if (!enabledCatalog.length) {
     throw new ApiError(503, "catalog_not_ready", "Nenhum item está habilitado para reconhecimento.", false);
   }
@@ -140,7 +150,7 @@ export async function triageWithOpenAI(image: Buffer): Promise<TriageDecision> {
       store: false,
       input: [
         { role: "system", content: buildTriageSystemPrompt(enabledCatalog, confusionSets) },
-        { role: "user", content: classifiedImageContent(image) }
+        { role: "user", content: classifiedImageContent(image, observableSignals) }
       ],
       text: { format: zodTextFormat(TriageDecisionSchema, "braciera_recognition_triage") }
     });
@@ -158,7 +168,8 @@ export async function rerankWithOpenAI(
   image: Buffer,
   triage: TriageDecision,
   shortlist: MenuItem[],
-  hardNegatives: HardNegative[]
+  hardNegatives: HardNegative[],
+  observableSignals: ObservableSignals
 ): Promise<RerankDecision> {
   if (shortlist.length < 3 || shortlist.length > 5) {
     throw new ApiError(422, "invalid_shortlist", "O reranking exige shortlist entre 3 e 5 candidatos.", false);
@@ -178,7 +189,7 @@ export async function rerankWithOpenAI(
         },
         {
           role: "user",
-          content: rerankUserContent(image, shortlist, hardNegatives)
+          content: rerankUserContent(image, shortlist, hardNegatives, observableSignals)
         }
       ],
       text: { format: zodTextFormat(RerankDecisionSchema, "braciera_reference_rerank") }

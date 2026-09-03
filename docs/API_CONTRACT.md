@@ -1,129 +1,135 @@
-# API Contract — Braciera Vision A3 / Hierarchical Recognition v2
+# API Contract — Braciera Vision A3 / Quality Signal Contract v1
 
 ## POST `/api/v1/analyze`
 
 `Content-Type: multipart/form-data`; campo obrigatório `image` (JPEG/PNG/WebP, limite default 8 MB).
 
-O endpoint público continua compatível com o frontend atual. Os campos legados `pizzaId`/`pizzaName` são mantidos por compatibilidade e podem representar item de família `pizza`, `calzone` ou `dolci` quando o catálogo for ampliado.
+O endpoint mantém compatibilidade com os campos legados (`pizzaId`, `pizzaName`, `referenceImage`, `qualitySignals`) e adiciona o contrato explícito da POC:
 
-## Pipeline interno
+- `family`
+- `recognitionStatus`
+- `predictedItem`
+- `reference`
+- `observableSignals`
+- `quality_status`
+- `quality_notes`
 
-1. image quality gate;
-2. family router: `pizza | calzone | dolci | other | inconclusive`;
-3. visual fingerprint observável;
-4. shortlist server-validada de 3–5 candidatos;
-5. reference-budget gate: deve ser possível enviar ao menos uma referência oficial para cada candidato do shortlist que declara referência;
-6. reranking em segunda chamada, apenas com shortlist + referências oficiais disponíveis + hard negatives confirmados relevantes;
-7. selective classification / abstention.
+## Pipeline
 
-Ambas as chamadas usam `gpt-4.1-mini`, Responses API, `store:false` e Structured Outputs/Zod.
+1. normalização da imagem;
+2. extração local de sinais alinhados ao bundle de treino (`model_bundle_v1` / feature schema `braciera_features_v2_no_family_leakage`);
+3. quality gate de captura;
+4. family router `pizza | calzone | dolci | other | inconclusive`;
+5. fingerprint + shortlist 3–5;
+6. reference-budget gate;
+7. reranking com `gpt-4.1-mini`, referências oficiais e sinais locais do bundle como evidência complementar;
+8. selective classification / abstention;
+9. contrato de leitura experimental de qualidade.
 
-## 200 — `success`
+O classificador sklearn bootstrap exportado não é promovido a decisão autônoma no Node porque os evals reais não validaram seus thresholds para produção. O bundle é integrado como **observable scaffold/evidência**, e `gpt-4.1-mini` permanece a camada complementar semântica/referencial. Isso evita transformar métricas bootstrap em decisão operacional.
+
+## Exemplo — `success`
 
 ```json
 {
   "requestId": "uuid",
   "status": "success",
-  "pizzaId": "zozzona",
-  "pizzaName": "Zozzona",
-  "confidenceLabel": "high",
-  "confidenceScore": null,
-  "confidenceCalibrated": false,
-  "alternatives": [
-    { "pizzaId": "calabresa", "pizzaName": "Calabresa", "confidenceScore": null }
+  "family": "pizza",
+  "recognitionStatus": "recognized",
+  "predictedItem": {
+    "itemId": "zozzona",
+    "displayName": "Zozzona"
+  },
+  "reference": {
+    "imageUrl": "https://...",
+    "role": "identity_reference"
+  },
+  "observableSignals": {
+    "crust": {
+      "state": "observed",
+      "crustWidthProxy": 0.22,
+      "edgeDensity": 0.14,
+      "centerToCrustValueDelta": -48,
+      "note": "Cornicione visível para leitura experimental de largura, textura e contraste."
+    },
+    "leopardSpotting": {
+      "state": "observed",
+      "darkRatio": 0.08,
+      "note": "Pontos escuros no anel externo medidos como proxy visual de leoparding/ponto de forno."
+    },
+    "texture": { "state": "observed", "grayStd": 62, "edgeDensity": 0.22, "note": "..." },
+    "blur": { "state": "observed", "laplacianVariance": 950, "note": "..." },
+    "shape": { "state": "observed", "areaRatio": 0.70, "circularity": 0.77, "aspectRatio": 1.02, "note": "..." },
+    "radialDistribution": { "state": "observed", "centerValue": 160, "midValue": 150, "crustValue": 205, "centerToCrustValueDelta": -45, "note": "..." },
+    "semanticCues": {
+      "state": "observed",
+      "ratios": { "red": 0.15, "green": 0.03, "yellow": 0.04, "dark": 0.06, "cream": 0.12, "brownToast": 0.07, "highSaturation": 0.28 },
+      "cues": ["vermelhos/tomate aparentes", "queijo/cremes claros aparentes"],
+      "note": "Cores semânticas aparentes; ingredientes ocultos não são inferidos."
+    },
+    "meta": {
+      "source": "training_bundle_observable_scaffold",
+      "bundleVersion": "quality-signal-profile.v1",
+      "calibratedQuality": false
+    }
+  },
+  "quality_status": "experimental_compatible",
+  "quality_notes": [
+    "Cornicione visível: a POC consegue ler largura, textura e contraste do anel externo.",
+    "A leitura visual da POC está compatível com a referência usada nesta comparação, sem certificar qualidade operacional.",
+    "Qualidade operacional ainda não calibrada com fotos boas/ruins validadas pela La Braciera."
   ],
-  "ingredients": ["Pomodoro Italiano", "Fiordillatte"],
-  "referenceImage": "https://...",
-  "qualitySignals": {
-    "shape": { "state": "neutral", "observation": "..." },
-    "bake": { "state": "unknown", "observation": "..." },
-    "crust": { "state": "unknown", "observation": "..." },
-    "toppingDistribution": { "state": "neutral", "observation": "..." },
-    "expectedIngredients": { "state": "unknown", "observation": "..." }
-  },
-  "evidence": ["..."],
-  "warnings": ["..."],
-  "nutritionSource": null,
-  "recognition": {
-    "family": "pizza",
-    "imageQuality": { "decision": "pass", "reasonCodes": [], "observations": ["..."] },
-    "observedFingerprint": { "distinctiveSignals": ["..."] },
-    "shortlist": [
-      { "itemId": "zozzona", "itemName": "Zozzona" },
-      { "itemId": "calabresa", "itemName": "Calabresa" },
-      { "itemId": "casteloes", "itemName": "Castelões" }
-    ],
-    "referenceGrounded": true,
-    "hardNegativeIds": [],
-    "abstentionReasons": [],
-    "calibrationStatus": "pending_eval",
-    "calibratedProbability": null
-  },
-  "meta": {
-    "promptVersion": "hierarchical-recognition.v2",
-    "catalogVersion": "sha256:...",
-    "abstentionPolicyVersion": "precalibration-v1"
-  }
+  "confidenceScore": null,
+  "confidenceCalibrated": false
 }
 ```
 
-## 200 — `inconclusive`
+## Estados de qualidade permitidos
 
-Mesmo payload, com `pizzaId`, `pizzaName` e `referenceImage` nulos e `ingredients=[]`. `recognition.abstentionReasons` explica o gate que bloqueou aceitação, por exemplo:
+Enquanto não houver dataset de pizzas boas/ruins validado pelo cliente, **somente**:
 
-- `image_quality_retry`;
-- `family_other` / `family_inconclusive`;
-- `shortlist_below_minimum_3`;
-- `shortlist_has_no_official_references`;
-- `reference_budget_insufficient`;
-- `heuristic_score_below_policy`;
-- `top_margin_below_policy`;
-- `selected_class_missing_official_reference`;
-- `official_reference_agreement_insufficient`;
-- `too_many_contradictions`.
+- `not_calibrated`: leitura existe, mas falta grounding/calibração suficiente para comparação experimental;
+- `experimental_compatible`: sinais observáveis e referência estão visualmente compatíveis na POC; NÃO significa aprovação;
+- `experimental_attention`: há sinal observável que merece conferência de montagem/foto/referência; NÃO significa reprovação;
+- `inconclusive`: reconhecimento ou captura não permitem uma leitura útil.
 
-`inconclusive` é resultado correto; não é erro de API.
+Nunca usar `approved`, `rejected`, `certified`, `aprovada`, `reprovada`, `certificada` ou equivalentes como veredito. A qualidade operacional permanece `not_calibrated` até existir dataset aprovado/reprovado pelo cliente e calibração medida.
 
-## Calibração
+## ObservableSignals
 
-Os números `heuristicScore` retornados internamente pelo VLM são usados apenas para ordenação/política seletiva. **Não são probabilidades calibradas.** A API pública mantém `confidenceScore=null`, `confidenceCalibrated=false` e `calibratedProbability=null`.
+O scaffold local usa os mesmos conceitos exportados no treinamento:
 
-`data/abstention-policy.json` contém a política versionada. O estado atual é `pending_eval`: os thresholds/margens são valores conservadores de bootstrap e só podem ser chamados de calibrados depois de ajuste no mesmo test set versionado com accepted accuracy, false-positive rate, coverage/inconclusive rate e confusion matrix.
+- `crust`: cornicione, largura proxy, densidade de borda e contraste centro/borda;
+- `leopardSpotting`: dark ratio no anel externo como proxy de pontos de forno;
+- `texture`: dispersão de cinza e densidade de bordas;
+- `blur`: variância de Laplaciano proxy;
+- `shape`: ocupação, circularidade e aspecto;
+- `radialDistribution`: centro / meio / cornicione e delta de luminosidade;
+- `semanticCues`: razões de vermelho, verde, amarelo, escuro, creme, tostado e alta saturação.
 
-## Confusion sets e hard negatives
+Essas features são **observáveis**, não labels de qualidade.
 
-- `data/confusion-sets.json`: grupos explícitos de classes parecidas + sinais discriminantes.
-- `data/hard-negatives.json`: registry de erros com ground truth confirmado. Registros não confirmados não entram no reranking.
-- Hard negative é contraexemplo; nunca vira automaticamente exemplo de treinamento.
+## Inconclusive e privacidade da shortlist
 
-## Referências oficiais
+Se o reconhecimento for inconclusivo:
 
-A segunda chamada recebe apenas referências oficiais dos candidatos do shortlist. Antes de chamar o reranker, o servidor verifica se `MAX_REFERENCE_IMAGES` comporta pelo menos uma imagem oficial de cada candidato que possui referência. Primeiro é enviada uma referência por candidato; somente o orçamento restante é usado para segunda vista ou hard negatives com imagem. Assim, um candidato nunca é considerado grounded por uma referência que não chegou ao modelo.
+- `predictedItem = null`;
+- `reference = null`;
+- `alternatives = []`;
+- `recognition.shortlist = []`.
 
-Se nenhum candidato do shortlist possui referência oficial, a pipeline abstém antes da segunda chamada. Se o candidato selecionado não possui referência oficial, a política conservadora também abstém em vez de aceitar uma classe sem grounding visual. Nenhuma referência ausente é inventada.
+A shortlist fraca continua disponível apenas internamente para eval/hard-negative mining e não vaza como sugestão ao frontend.
+
+## Calibração de reconhecimento
+
+`heuristicScore` do VLM continua interno e não é probabilidade. A API mantém `confidenceScore=null`, `confidenceCalibrated=false` e `recognition.calibratedProbability=null` até calibração real.
 
 ## Guardrails
 
-1. `gpt-4.1-mini` fica pinado como baseline até eval comparativo.
-2. CLIP/SigLIP/DINOv2 não fazem parte deste runtime.
-3. IDs fora do catálogo/família/shortlist são removidos ou bloqueados server-side.
-4. Ingredientes/nome/referenceImage vêm do catálogo, nunca do modelo.
-5. Reconhecimento e QA operacional permanecem separados.
-6. Falha OpenAI retorna erro real; não há fallback fictício.
-7. Mudança de modelo, prompt, policy ou retrieval exige repetir o mesmo test set versionado.
-
-## Erros
-
-Formato permanece:
-
-```json
-{
-  "requestId": "uuid",
-  "status": "error",
-  "code": "openai_upstream_error",
-  "message": "A análise visual falhou no provedor de IA.",
-  "retryable": true
-}
-```
-
-Códigos incluem `image_required`, `image_too_large`, `invalid_image`, `unsupported_image_type`, `image_too_small`, `catalog_not_ready`, `invalid_shortlist`, `origin_not_allowed`, `rate_limited`, `openai_not_configured`, `openai_invalid_triage`, `openai_invalid_rerank`, `openai_rate_limited`, `openai_upstream_error`, `openai_request_failed` e `internal_error`.
+1. `gpt-4.1-mini` permanece fixado.
+2. O bundle bootstrap não certifica identidade nem qualidade sozinho.
+3. Ingredientes e referência vêm do catálogo, nunca do modelo.
+4. Observable signals não autorizam inferir ingrediente oculto.
+5. Reconhecimento inconclusivo não mostra alternativas fracas.
+6. Falha OpenAI continua erro real; nenhum fallback fictício.
+7. Qualidade só pode virar veredito operacional após dataset cliente boa/ruim + calibração + gate explícito.

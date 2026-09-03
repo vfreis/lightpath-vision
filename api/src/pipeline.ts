@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import { rerankWithOpenAI, triageWithOpenAI } from "./openai.js";
+import { extractObservableSignals } from "./quality-signals.js";
 import { assessReferenceBudget, assessRerank, prepareShortlist } from "./recognition.js";
 import type { HierarchicalDecision } from "./schemas.js";
 
@@ -16,7 +17,8 @@ function terminalDecision(
   triage: HierarchicalDecision["triage"],
   shortlistIds: string[],
   hardNegativeIds: string[],
-  abstentionReasons: string[]
+  abstentionReasons: string[],
+  observableSignals: HierarchicalDecision["observableSignals"]
 ): HierarchicalDecision {
   return {
     triage,
@@ -24,27 +26,32 @@ function terminalDecision(
     shortlistIds,
     hardNegativeIds,
     abstentionReasons,
-    referenceGrounded: false
+    referenceGrounded: false,
+    observableSignals
   };
 }
 
 export async function classifyHierarchically(image: Buffer): Promise<HierarchicalDecision> {
-  const triage = await triageWithOpenAI(image);
+  // Training bundle integration is deliberately evidence-first: the exported observable
+  // scaffold is computed locally before GPT. The bootstrap sklearn decision thresholds are
+  // not imported because real-domain evals did not validate them as autonomous decisions.
+  const observableSignals = await extractObservableSignals(image);
+  const triage = await triageWithOpenAI(image, observableSignals);
   const prepared = prepareShortlist(triage);
   const shortlistIds = prepared.items.map((item) => item.slug);
   const hardNegativeIds = prepared.hardNegatives.map((record) => record.id);
   const triageAbstention = terminalTriageReasons(prepared.abstentionReasons);
 
   if (triageAbstention.length > 0) {
-    return terminalDecision(triage, shortlistIds, hardNegativeIds, triageAbstention);
+    return terminalDecision(triage, shortlistIds, hardNegativeIds, triageAbstention, observableSignals);
   }
 
   const referenceAbstention = assessReferenceBudget(prepared.items, config.MAX_REFERENCE_IMAGES);
   if (referenceAbstention.length > 0) {
-    return terminalDecision(triage, shortlistIds, hardNegativeIds, referenceAbstention);
+    return terminalDecision(triage, shortlistIds, hardNegativeIds, referenceAbstention, observableSignals);
   }
 
-  const rerank = await rerankWithOpenAI(image, triage, prepared.items, prepared.hardNegatives);
+  const rerank = await rerankWithOpenAI(image, triage, prepared.items, prepared.hardNegatives, observableSignals);
   const assessment = assessRerank(rerank, prepared.items);
 
   return {
@@ -53,6 +60,7 @@ export async function classifyHierarchically(image: Buffer): Promise<Hierarchica
     shortlistIds,
     hardNegativeIds,
     abstentionReasons: assessment.accepted ? [] : assessment.reasons,
-    referenceGrounded: assessment.referenceGrounded
+    referenceGrounded: assessment.referenceGrounded,
+    observableSignals
   };
 }
