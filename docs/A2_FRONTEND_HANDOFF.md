@@ -1,80 +1,135 @@
-# A2 Frontend Experience — câmera + premium mobile / handoff para A4
+# A2 Frontend Experience — POC quality-first / handoff para A4
 
 ## Branch desta rodada
 
-`agent/a2-camera-premium-v2`, criada diretamente da `main` atual após o deploy single-domain Hostinger e o recognition playbook v2.
+`agent/a2-quality-first-poc`, criada diretamente da `main` atual.
 
-## Câmera — padrão Dermaly transportado
+Esta entrega implementa o override canônico de `12_POC_COPY_QUALITY_EXPERIENCE_SPEC` após a reunião de 03/09. O reconhecimento do produto continua evidente, mas a experiência passa a comunicar o valor real discutido com a La Braciera: **padronização visual, montagem e aderência à referência/ficha técnica da casa**.
 
-O fluxo agora segue o padrão robusto já comprovado no Dermaly, sem carregar lógica clínica:
+## Mudança de hierarquia
 
-- `<video autoPlay playsInline muted>`;
-- `onCanPlay` controla `cameraReady`;
-- shutter bloqueado enquanto a câmera não estiver pronta;
-- estado visual de loading enquanto o stream prepara;
-- stream anterior sempre é encerrado antes de novo `getUserMedia`;
-- câmera traseira (`environment`) permanece default;
-- botão de alternância `environment <-> user` reinicia o stream;
-- retry explícito após erro;
-- mensagens específicas para permission denied, câmera inexistente, câmera ocupada, constraints incompatíveis e bloqueio de segurança/HTTPS;
-- fallback para `video: true` quando a câmera solicitada não puder ser satisfeita.
+### Home
 
-## Captura guiada / image-quality gate no client
+- eyebrow: `LA BRACIERA VISION`;
+- headline: `Da bancada ao padrão da casa.`;
+- CTA principal: `Conferir uma pizza`;
+- CTA secundário: `Usar foto da galeria`;
+- superfície explica de forma editorial que a POC começa a observar cornicione, ponto de forno, montagem, distribuição da cobertura e referência da casa;
+- removidos os cards de “modo LIVE/demo” da superfície principal para reduzir aparência SaaS/dashboard.
 
-A câmera orienta o usuário a:
+### Captura
 
-- manter a pizza inteira dentro do guia circular;
-- posicionar a câmera aproximadamente paralela à mesa/top-down ou oblíquo leve;
-- usar luz uniforme;
-- segurar firme no momento do shutter.
+A câmera robusta existente foi preservada: rear-first, `autoPlay`, `playsInline`, `onCanPlay`, ready/loading, retry, switch camera, preflight de movimento/luz/detalhe e galeria.
 
-Antes de consolidar a foto, `frontend/src/lib/camera.ts` compara dois frames pequenos e baratos no browser. A heurística bloqueia apenas sinais muito ruins: resolução insuficiente, pouca luz, exposição extrema, movimento forte entre frames ou detalhe visual severamente baixo. A função é reduzir blur/corte ruim antes do upload, não reconhecer/classificar produto no browser.
+A copy passou a falar como conferência de bancada:
 
-Upload/galeria continua primeiro-classe e passa pelo mesmo `normalizeImage` usado pela câmera.
+- `Enquadre a pizza inteira`;
+- cornicione e montagem devem ficar visíveis;
+- pouca inclinação, luz homogênea e sem corte;
+- estados `Preparando a bancada…`, `Câmera pronta` e `Foto fora do ponto…`.
 
-## UX / motion
+### Análise / motion
 
-- experiência mobile-first quase full-screen para câmera;
-- shared image transition `layoutId="pizza-photo"` entre preview/análise/resultado;
-- microflash de captura e scale curto no shutter;
-- guia da câmera respira apenas quando `ready`;
-- scan + stages continuam explicitamente como feedback de UX, não representação literal do processamento;
-- ingredientes e sinais entram em stagger curto;
-- referência oficial é exibida quando `referenceImage` está disponível;
-- `MotionConfig reducedMotion="user"` + CSS `prefers-reduced-motion` removem movimento não essencial;
-- safe areas e targets de toque preservados;
-- layout ajustado para 360–380 px e telas baixas.
+A foto capturada continua o mesmo objeto via `layoutId="pizza-photo"`.
 
-## Brand / favicon
+O scanner linear/sci-fi deixou de ser a linguagem principal. A leitura visual agora usa:
 
-- logo light oficial verificado continua aplicado via `frontend/src/brand.css`;
-- o mesmo asset oficial CDN foi aplicado como `favicon` e `apple-touch-icon` em `frontend/index.html`;
-- direção editorial usa foto/produto, forno/brasa e alto contraste, mas **não declara HEX ou tipografia como oficiais**, porque esses tokens exatos ainda não estão verificados;
-- `Powered by LightPath` permanece secundário.
+- anel de cornicione;
+- leitura radial centro → borda;
+- marcações discretas de cobertura;
+- transição contínua da mesma pizza para o resultado.
+
+Stages de UX, na ordem canônica:
+
+1. `Lendo o cornicione…`
+2. `Conferindo o ponto de forno…`
+3. `Mapeando a montagem…`
+4. `Cruzando ingredientes visuais…`
+5. `Comparando com a referência da casa…`
+6. `Fechando a leitura…`
+
+As etapas continuam explicitamente narrativas: não afirmam que seis classificadores validados já existem.
+
+## Resultado
+
+O resultado passou a parecer uma ficha de conferência gastronômica, não dashboard:
+
+- `PRODUTO PROVÁVEL` + sabor/tipo em tipografia editorial grande;
+- `Leitura do padrão` abaixo do reconhecimento;
+- cinco linhas de bancada: `Cornicione`, `Ponto de forno`, `Montagem`, `Distribuição da cobertura`, `Similaridade com referência`;
+- observações existentes do backend são reaproveitadas sem promover heurística a certificação;
+- `Referência da casa` aparece quando `referenceImage` existe;
+- ingredientes conhecidos são contextualizados como `FICHA TÉCNICA · CONTEXTO VISUAL`.
+
+Se o reconhecimento for `inconclusive`, a UI não mostra alternativas fracas. Usa `Essa pizza ainda pede outra olhada.` e orienta nova foto.
+
+## Quality status / anti-overclaim
+
+`frontend/src/types.ts` aceita de forma retrocompatível os campos opcionais:
+
+- `family`;
+- `observableSignals`;
+- `quality_status`;
+- `quality_notes`.
+
+`quality_status` suportado:
+
+`not_calibrated | experimental_compatible | experimental_attention | inconclusive`
+
+Enquanto o backend atual não enviar um status, o frontend assume **`not_calibrated`**.
+
+Regra de produto: quando `quality_status=not_calibrated`, a interface NÃO mostra `APROVADA`, `REPROVADA`, selo verde/vermelho ou wording equivalente. Mostra `Qualidade não calibrada`, observações visuais e aviso de POC.
+
+## POC obrigatória
+
+O selo `POC LightPath · Em treinamento` fica visível no topo. Home possui explicação expansível e o resultado possui aviso explícito:
+
+- reconhecimento e qualidade ainda exigem fotos reais da operação;
+- treinamento / machine learning;
+- calibração;
+- regras da operação La Braciera;
+- a POC não deve ser usada como controle operacional;
+- a leitura não representa aprovação/reprovação da pizza.
+
+## Acessibilidade / mobile
+
+- câmera e galeria preservadas;
+- safe areas iOS;
+- alvos de toque confortáveis;
+- layout 320–380 px tratado;
+- `MotionConfig reducedMotion="user"` preservado;
+- CSS `prefers-reduced-motion` desliga guide breathing, leitura radial e transições não essenciais;
+- contraste e texto continuam legíveis sem depender dos overlays.
+
+## Brand
+
+Logo/favicons oficiais já presentes na `main` foram preservados. A direção editorial usa fotografia, brasa e matéria-prima, mas não declara HEX/fonte exatos como oficiais enquanto esses tokens não tiverem verificação de brand book.
 
 ## API / segurança
 
-A `main` atual serve frontend e API no mesmo domínio Hostinger. `frontend/src/lib/api.ts` usa same-origin por default e chama:
+Nenhuma mudança na integração segura:
 
 `POST /api/v1/analyze`
 
-`VITE_API_BASE_URL` continua opcional para ambientes separados. Nenhuma `OPENAI_API_KEY` é usada no browser.
+A POC continua same-origin no Hostinger por default e não usa `OPENAI_API_KEY` no browser.
 
-## Arquivos alterados
+## Arquivos desta rodada
 
 - `frontend/src/App.tsx`
 - `frontend/src/styles.css`
-- `frontend/src/lib/camera.ts` (novo)
+- `frontend/src/types.ts`
 - `frontend/index.html`
 - `docs/A2_FRONTEND_HANDOFF.md`
 
 ## Gate A4
 
-1. Fazer build/typecheck real do frontend no runner disponível.
-2. Testar a URL Hostinger real em Safari iOS e Chrome Android.
-3. Validar: abrir câmera, permission denied, retry, alternar câmera, loading/ready, shutter e galeria.
-4. Testar captura com tremor proposital, baixa luz e foto nítida para garantir que a heurística ajuda sem bloquear capturas normais.
-5. Confirmar orientação da foto e upload normalizado.
-6. Executar `success`, `inconclusive`, falha de rede/OpenAI e item fora do domínio sem fallback fictício.
-7. Confirmar favicon/logo e referência oficial em rede móvel real.
-8. Manter GO de reconhecimento separado do GO de câmera: reconhecimento exige evals/calibração conforme `07_VISION_RECOGNITION_PLAYBOOK`.
+1. Executar typecheck/build real no runner ou Hostinger.
+2. Smoke de câmera e galeria em Safari iOS + Chrome Android.
+3. Validar visualmente a continuidade captura → leitura radial/cornicione → resultado.
+4. Validar `prefers-reduced-motion` em sistema/navegador.
+5. Testar `success` com e sem `referenceImage`, `inconclusive`, falha de rede/OpenAI e foto ruim.
+6. Testar payload legado sem `quality_status`: deve cair em `not_calibrated` sem quebrar a UI.
+7. Testar payload futuro com todos os quatro valores de `quality_status`.
+8. Fazer busca na superfície renderizada para garantir ausência de `APROVADA`/`REPROVADA` quando não calibrado.
+9. Confirmar em <=10 segundos que um usuário entende: é POC, está em treinamento, reconhece produto como demonstração, objetivo é padrão da casa e produto final depende da operação real.
+10. GO operacional continua proibido até dataset aprovado/reprovado pelo cliente, calibração e regras de qualidade existirem.
