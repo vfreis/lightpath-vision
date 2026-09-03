@@ -43,14 +43,33 @@
     ]
   },
   {
-    "id": "nutella-pistacchio-dolci",
-    "family": "dolci",
-    "members": ["nutella-lindt-brownie", "nutella-brownie-butter-cookies", "pistacchio-italiano-e-nutella", "nocciola-chocolat-du-jour"],
+    "id": "sweet-pizza-chocolate-pistachio",
+    "family": "pizza",
+    "members": ["delizia-rossa", "nutella-lindt-e-brownie", "pistacchio-italiano-e-nutella", "nutella-brownie-e-butter-cookies"],
     "discriminators": [
-      "pistache/creme verde evidente favorece Pistacchio Italiano e Nutella",
-      "brownie + chocolate Lindt sem cookies favorece Nutella, Lindt & Brownie",
-      "butter cookies visíveis favorecem Pizza Nutella, Brownie e Butter Cookies",
-      "pistache caramelizado e elementos de Chocolat du Jour favorecem Nocciola quando realmente visíveis"
+      "frutas vermelhas e chocolate branco favorecem Delizia Rossa",
+      "Lindt + brownie favorecem Nutella, Lindt e Brownie",
+      "creme de pistache favorece Pistacchio Italiano e Nutella",
+      "butter cookies favorecem Nutella, Brownie e Butter Cookies"
+    ]
+  },
+  {
+    "id": "calzone-dolci",
+    "family": "calzone",
+    "members": ["calzone-al-pistacchio", "calzone-smores-nutella-lindt"],
+    "discriminators": [
+      "pistache + geleia de frutas vermelhas favorecem Calzone al Pistacchio",
+      "marshmallow + chocolate favorecem Calzone S'Mores di Nutella e Lindt",
+      "forma dobrada/fechada é obrigatória para a família calzone"
+    ]
+  },
+  {
+    "id": "dolci-tiramisu",
+    "family": "dolci",
+    "members": ["tiramissu", "pistacchio-tiramissu"],
+    "discriminators": [
+      "pistache verde/crocante favorece Tiramisù al Pistacchio",
+      "sem sinal de pistache, preservar Tiramisù como candidato quando a estrutura visual for compatível"
     ]
   }
 ]
