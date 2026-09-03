@@ -1,1 +1,36 @@
-__PLACEHOLDER__
+{
+  "version": "quality-signal-profile.v1",
+  "sourceBundle": "model_bundle_v1",
+  "sourceBundleFolderId": "1sMJekrLczPdOPyTzxrqhDpzRpNYbWhL1",
+  "featureSchemaVersion": "braciera_features_v2_no_family_leakage",
+  "featureSchemaFileId": "1NvGGpfpXyoC382CM-RS97exlBX5VM2fb",
+  "qualityFeaturesFileId": "1yxE2zOAd67WeAVLjQK67eG-Lkeh8vjSJ",
+  "role": "complementary_observable_scaffold",
+  "productionRecognitionApproved": false,
+  "qualityCalibrated": false,
+  "sourceScope": "observable_scaffold_not_quality_verdict",
+  "integrationPolicy": "Use exported feature semantics as local observable evidence and GPT-4.1-mini as complementary semantic/reference comparison. Do not import bootstrap classifier thresholds as production decisions.",
+  "observableFeatureMap": {
+    "crust": ["crust_edge_density", "crust_width_proxy", "center_to_crust_value_delta"],
+    "leopardSpotting": ["crust_dark_ratio", "brown_toast_ratio"],
+    "texture": ["gray_texture_std", "edge_density"],
+    "blur": ["laplacian_variance"],
+    "shape": ["area_ratio", "circularity", "aspect_ratio"],
+    "radialDistribution": ["center_hsv2_mean", "mid_hsv2_mean", "crust_hsv2_mean", "center_to_crust_value_delta"],
+    "semanticCues": ["red_ratio", "green_ratio", "yellow_ratio", "dark_ratio", "white_cream_ratio", "brown_toast_ratio", "high_sat_ratio"]
+  },
+  "allowedQualityStatuses": [
+    "not_calibrated",
+    "experimental_compatible",
+    "experimental_attention",
+    "inconclusive"
+  ],
+  "forbiddenVerdictLanguage": [
+    "approved",
+    "rejected",
+    "certified",
+    "aprovada",
+    "reprovada",
+    "certificada"
+  ]
+}
