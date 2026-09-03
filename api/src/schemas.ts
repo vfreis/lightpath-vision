@@ -1,9 +1,18 @@
 import { z } from "zod";
+import type { ObservableSignals } from "./quality-signals.js";
 
 export const QualitySignalSchema = z.object({
   state: z.enum(["positive", "neutral", "attention", "unknown"]),
   observation: z.string().min(1).max(240)
 });
+
+export const QualityStatusSchema = z.enum([
+  "not_calibrated",
+  "experimental_compatible",
+  "experimental_attention",
+  "inconclusive"
+]);
+export type QualityStatus = z.infer<typeof QualityStatusSchema>;
 
 export const ProductFamilySchema = z.enum(["pizza", "calzone", "dolci", "other", "inconclusive"]);
 export type ProductFamily = z.infer<typeof ProductFamilySchema>;
@@ -71,6 +80,7 @@ export type HierarchicalDecision = {
   hardNegativeIds: string[];
   abstentionReasons: string[];
   referenceGrounded: boolean;
+  observableSignals: ObservableSignals;
 };
 
 export type ConfidenceLabel = "high" | "medium" | "low" | "unavailable";
@@ -78,6 +88,13 @@ export type ConfidenceLabel = "high" | "medium" | "low" | "unavailable";
 export type PublicAnalysisResponse = {
   requestId: string;
   status: "success" | "inconclusive";
+  family: ProductFamily;
+  recognitionStatus: "recognized" | "inconclusive";
+  predictedItem: { itemId: string; displayName: string } | null;
+  reference: { imageUrl: string; role: "identity_reference" } | null;
+  observableSignals: ObservableSignals;
+  quality_status: QualityStatus;
+  quality_notes: string[];
   pizzaId: string | null;
   pizzaName: string | null;
   confidenceLabel: ConfidenceLabel;
@@ -115,6 +132,9 @@ export type PublicAnalysisResponse = {
     promptVersion: string;
     catalogVersion: string;
     abstentionPolicyVersion: string;
+    qualitySignalContractVersion: string;
+    trainingBundleQualityVersion: string;
+    qualityCalibrationStatus: "not_calibrated";
   };
 };
 
