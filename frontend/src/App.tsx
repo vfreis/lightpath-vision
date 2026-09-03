@@ -161,12 +161,11 @@ export default function App() {
       }
 
       streamRef.current = stream
-      requestAnimationFrame(() => {
-        const video = videoRef.current
-        if (!video || streamRef.current !== stream) return
+      const video = videoRef.current
+      if (video) {
         video.srcObject = stream
         void video.play().catch(() => undefined)
-      })
+      }
     } catch (cameraAccessError) {
       setCameraError(cameraErrorText(cameraAccessError))
       setCameraBusy(false)
@@ -188,6 +187,14 @@ export default function App() {
     setFacingMode(next)
     void startCamera(next)
   }
+
+  const attachCameraVideo = useCallback((video: HTMLVideoElement | null) => {
+    videoRef.current = video
+    const stream = streamRef.current
+    if (!video || !stream) return
+    video.srcObject = stream
+    void video.play().catch(() => undefined)
+  }, [])
 
   function onCameraCanPlay() {
     const video = videoRef.current
@@ -323,7 +330,7 @@ export default function App() {
           {view === 'home' && (
             <motion.section key="home" className="screen home" initial={{ opacity: 0, y: reduced ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <motion.div className="eyebrow" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>LA BRACIERA VISION</motion.div>
-              <motion.h1 initial={{ opacity: 0, y: reduced ? 0 : 14 }} animate={{ opacity: 1, y: 0 }}>Da bancada ao<br/><em>padrão da casa.</em></motion.h1>
+              <motion.h1 aria-label="Da bancada ao padrão da casa." initial={{ opacity: 0, y: reduced ? 0 : 14 }} animate={{ opacity: 1, y: 0 }}>Da bancada ao<br/><em>padrão da casa.</em></motion.h1>
               <motion.p className="lead" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduced ? 0 : .08 }}>Fotografe uma pizza para reconhecer o produto e iniciar uma leitura visual de montagem, ponto de forno e referência da casa.</motion.p>
 
               <div className="action-stack">
@@ -353,7 +360,7 @@ export default function App() {
               </div>
 
               <div className="camera-frame">
-                <video ref={videoRef} autoPlay playsInline muted onCanPlay={onCameraCanPlay} className="camera-video" />
+                <video ref={attachCameraVideo} autoPlay playsInline muted onCanPlay={onCameraCanPlay} className="camera-video" />
                 <div className={cameraReady ? 'pizza-guide ready' : 'pizza-guide'} aria-hidden="true"><span className="guide-center" /></div>
                 <div className="camera-shade" aria-hidden="true" />
                 <AnimatePresence>{captureFlash && <motion.div className="capture-flash" initial={{ opacity: .82 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} />}</AnimatePresence>
