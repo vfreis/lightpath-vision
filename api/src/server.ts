@@ -11,7 +11,9 @@ import { catalogSourcePath, catalogVersion, enabledCatalog, publicCatalog } from
 import { config } from "./config.js";
 import { normalizeImage } from "./image.js";
 import { classifyHierarchically } from "./pipeline.js";
+import { QUALITY_CALIBRATION_STATUS } from "./quality-contract.js";
 import { abstentionPolicy, confusionSets, hardNegatives } from "./recognition-context.js";
+import { QUALITY_SIGNAL_CONTRACT_VERSION, TRAINING_BUNDLE_QUALITY_VERSION } from "./quality-signals.js";
 import type { PublicErrorResponse } from "./schemas.js";
 import { ApiError } from "./util.js";
 
@@ -69,10 +71,16 @@ app.get("/healthz", (_req, res) => {
     status: "ok",
     recognitionClasses: enabledCatalog.length,
     recognitionPipeline: "hierarchical-v2",
+    qualitySignalPipeline: "bundle-observables-v1",
     confusionSets: confusionSets.length,
     confirmedHardNegatives: hardNegatives.filter((record) => record.confirmed).length,
     calibrationStatus: abstentionPolicy.calibrationStatus,
     abstentionPolicyVersion: abstentionPolicy.version,
+    qualitySignalContract: QUALITY_SIGNAL_CONTRACT_VERSION,
+    qualityCalibrationStatus: QUALITY_CALIBRATION_STATUS,
+    trainingBundleQualityVersion: TRAINING_BUNDLE_QUALITY_VERSION,
+    trainingBundleRole: "complementary_observable_scaffold",
+    autonomousBundleClassifierEnabled: false,
     openaiConfigured: Boolean(config.OPENAI_API_KEY),
     model: config.OPENAI_MODEL,
     catalogVersion
@@ -95,7 +103,6 @@ app.post("/api/v1/analyze", upload.single("image"), async (req, res, next) => {
   }
 });
 
-// Hostinger single-domain deployment: serve the Vite build from the same Express app.
 const frontendDist = resolve(process.cwd(), "frontend/dist");
 const frontendIndex = resolve(frontendDist, "index.html");
 if (existsSync(frontendIndex)) {
@@ -135,4 +142,5 @@ app.listen(config.PORT, () => {
   console.log(`Braciera Vision listening on :${config.PORT}`);
   console.log(`Catalog: ${catalogSourcePath}; version: ${catalogVersion}; enabled classes: ${enabledCatalog.length}`);
   console.log(`Recognition: hierarchical-v2; model=${config.OPENAI_MODEL}; calibration=${abstentionPolicy.calibrationStatus}`);
+  console.log(`Quality: bundle-observables-v1 / ${QUALITY_SIGNAL_CONTRACT_VERSION}; calibration=${QUALITY_CALIBRATION_STATUS}; bundle=${TRAINING_BUNDLE_QUALITY_VERSION}`);
 });
