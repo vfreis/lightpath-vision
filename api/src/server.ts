@@ -70,7 +70,8 @@ app.get("/healthz", (_req, res) => {
   res.json({
     status: "ok",
     recognitionClasses: enabledCatalog.length,
-    recognitionPipeline: "hierarchical-v2+bundle-observables",
+    recognitionPipeline: "hierarchical-v2",
+    qualitySignalPipeline: "bundle-observables-v1",
     confusionSets: confusionSets.length,
     confirmedHardNegatives: hardNegatives.filter((record) => record.confirmed).length,
     calibrationStatus: abstentionPolicy.calibrationStatus,
@@ -102,7 +103,6 @@ app.post("/api/v1/analyze", upload.single("image"), async (req, res, next) => {
   }
 });
 
-// Hostinger single-domain deployment: serve the Vite build from the same Express app.
 const frontendDist = resolve(process.cwd(), "frontend/dist");
 const frontendIndex = resolve(frontendDist, "index.html");
 if (existsSync(frontendIndex)) {
@@ -141,6 +141,6 @@ app.use(errorHandler);
 app.listen(config.PORT, () => {
   console.log(`Braciera Vision listening on :${config.PORT}`);
   console.log(`Catalog: ${catalogSourcePath}; version: ${catalogVersion}; enabled classes: ${enabledCatalog.length}`);
-  console.log(`Recognition: hierarchical-v2+bundle-observables; model=${config.OPENAI_MODEL}; calibration=${abstentionPolicy.calibrationStatus}`);
-  console.log(`Quality: ${QUALITY_SIGNAL_CONTRACT_VERSION}; calibration=${QUALITY_CALIBRATION_STATUS}; bundle=${TRAINING_BUNDLE_QUALITY_VERSION}`);
+  console.log(`Recognition: hierarchical-v2; model=${config.OPENAI_MODEL}; calibration=${abstentionPolicy.calibrationStatus}`);
+  console.log(`Quality: bundle-observables-v1 / ${QUALITY_SIGNAL_CONTRACT_VERSION}; calibration=${QUALITY_CALIBRATION_STATUS}; bundle=${TRAINING_BUNDLE_QUALITY_VERSION}`);
 });
