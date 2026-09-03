@@ -91,9 +91,15 @@ export function buildQualityContract(
   }
 
   const agreement = selectedReferenceAgreement(decision, selected);
+  const keySignalsReadable =
+    signals.blur.state === "observed" &&
+    signals.crust.state === "observed" &&
+    signals.shape.state === "observed" &&
+    signals.radialDistribution.state === "observed";
+
   const hasVisualAttention =
-    signals.blur.state === "limited" ||
-    decision.rerank?.contradictions.length !== 0 ||
+    !keySignalsReadable ||
+    (decision.rerank?.contradictions.length ?? 0) > 0 ||
     agreement === "weak" ||
     agreement === "none" ||
     agreement === "unavailable";
