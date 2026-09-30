@@ -78,14 +78,11 @@ For a client-safe overview of the problem, solution, engineering decisions, and 
 
 **[AI Vision Quality Control — Portfolio Case Study](docs/PORTFOLIO_CASE_STUDY.md)**
 
-## Local development
+## Implementation evidence
 
-```bash
-npm install
-npm --workspace @lightpath/braciera-vision-api run build
-OPENAI_API_KEY=... npm --workspace @lightpath/braciera-vision-api start
-VITE_API_BASE_URL=http://localhost:8787 npm --workspace frontend run dev
-```
+The repository includes the working frontend, backend API, image-processing pipeline, structured response contracts, QA documentation, and integration artifacts used by this implementation.
+
+Runtime-specific commands and client-specific operational details are intentionally not part of the portfolio-facing README.
 
 ## Disclosure
 
