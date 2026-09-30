@@ -1,39 +1,89 @@
-# Braciera Vision
+# LightPath Vision — AI Vision Quality Control
 
-Protótipo comercial mobile-first de visão computacional para a La Braciera.
+Production-oriented computer vision and multimodal AI system built to analyze product images, compare observable visual evidence against approved references, and return structured results with explicit uncertainty handling.
 
-## Integração
+> **Portfolio note:** this repository contains the engineering implementation. The public case study intentionally omits client-specific business data, proprietary evaluation policies, internal thresholds, prompts, datasets, and other sensitive implementation details.
 
-- `frontend/`: React + Vite + TypeScript + Motion; câmera traseira, galeria, preview, análise e resultados.
-- `api/`: backend Node 22 + TypeScript; OpenAI server-side, catálogo fechado, Structured Outputs e guardrails de `inconclusive`.
-- `data/menu.json`: catálogo canônico reconciliado para o protótipo.
-- `docs/A2_FRONTEND_HANDOFF.md`: handoff do frontend.
-- `docs/API_CONTRACT.md`: contrato canônico da API.
-- `docs/QA_GO_NO_GO.md`: gate de QA e apresentação.
+## What this project demonstrates
 
-A jornada é câmera traseira ou galeria → preview/normalização → análise real → `success` ou `inconclusive`; falhas de rede/OpenAI permanecem `error`. O frontend nunca recebe `OPENAI_API_KEY`.
+- Multimodal AI integrated into a real application workflow
+- Server-side image preprocessing and validation
+- Structured, machine-readable AI outputs
+- Reference-based visual comparison
+- Explicit `success`, `inconclusive`, and `error` states
+- Deterministic server-side guardrails around AI reasoning
+- Frontend-to-backend API integration
+- Production-minded failure handling without synthetic success fallbacks
 
-## Catálogo completo
+## Architecture
 
-A decisão de produto vigente é reconhecer **todas as pizzas atualmente reconciliadas no cardápio/listagens correntes**, e não apenas um subconjunto de demo. O `data/menu.json` contém **36 sabores**, todos com `recognitionEnabled: true`.
-
-Cada item preserva fonte, data de reconciliação, `confidenceTier` e estado de disponibilidade. Itens cuja ficha/validade ainda depende de reconciliação oficial permanecem sinalizados; isso não autoriza o modelo a inventar informação.
-
-Cobertura ampla não remove o guardrail: sabores visualmente semelhantes, imagem ruim, pizza fora do catálogo ou evidência insuficiente devem retornar `inconclusive`.
-
-## Local
-
-```bash
-npm install
-npm --workspace @lightpath/braciera-vision-api run build
-OPENAI_API_KEY=... npm --workspace @lightpath/braciera-vision-api start
-VITE_API_BASE_URL=http://localhost:8787 npm --workspace frontend run dev
+```text
+Image Input
+   ↓
+Safe Image Processing
+   ↓
+Multimodal AI Analysis
+   ↓
+Reference Comparison
+   ↓
+Server-Side Validation & Guardrails
+   ↓
+Structured Result
 ```
 
-## Demo honesty
+The AI layer performs visual reasoning. Critical business rules, catalog integrity, validation, permissions, and application state remain controlled by deterministic software.
 
-`inconclusive` é um comportamento correto. A Demo Segura permanece vazia até existir imagem real aprovada, hash/proveniência e resultado obtido pela mesma API. Nenhuma classificação bem-sucedida é criada manualmente.
+## Repository structure
 
-## Brand gate
+- `frontend/` — React + Vite + TypeScript interface for image capture/upload, preview, analysis, and result rendering
+- `api/` — Node.js + TypeScript backend for image handling, multimodal inference, structured outputs, and validation
+- `data/` — versioned product/reference data used by the implementation
+- `docs/API_CONTRACT.md` — API contract
+- `docs/QA_GO_NO_GO.md` — QA and release criteria
+- `docs/PORTFOLIO_CASE_STUDY.md` — sanitized engineering case study for clients and recruiters
 
-O catálogo foi consolidado pelo Tech Lead após a entrega incompleta do A1. Assets oficiais, tipografia/tokens finais e imagens de referência ainda precisam ser incorporados antes de afirmar fidelidade visual completa à marca La Braciera. Até esse gate fechar, a UI usa tokens de apresentação explicitamente neutros.
+## Reliability principles
+
+### Explicit uncertainty
+
+The system is allowed to return `inconclusive` when visual evidence is insufficient. Uncertainty is treated as a valid system outcome rather than forcing a classification.
+
+### No fake fallback
+
+Network failures, provider errors, invalid responses, or configuration failures remain real errors. The application does not fabricate a successful recognition result to preserve the demo experience.
+
+### Server-side control
+
+Secrets remain server-side. Model output is validated before it becomes application state, and authoritative product/reference information is controlled by the software layer.
+
+### Structured outputs
+
+AI responses are constrained into predictable application contracts so downstream UI and services can consume them safely.
+
+## Technology
+
+- TypeScript
+- Node.js
+- React
+- Vite
+- REST APIs
+- Multimodal AI
+- Structured Outputs
+- Server-side image processing
+- Production-oriented validation and guardrails
+
+## Portfolio case study
+
+For a client-safe overview of the problem, solution, engineering decisions, and demonstrated capabilities, see:
+
+**[AI Vision Quality Control — Portfolio Case Study](docs/PORTFOLIO_CASE_STUDY.md)**
+
+## Implementation evidence
+
+The repository includes the working frontend, backend API, image-processing pipeline, structured response contracts, QA documentation, and integration artifacts used by this implementation.
+
+Runtime-specific commands and client-specific operational details are intentionally not part of the portfolio-facing README.
+
+## Disclosure
+
+This repository is shared as engineering evidence. Client-sensitive details and proprietary evaluation logic are intentionally not documented in the public portfolio narrative.
